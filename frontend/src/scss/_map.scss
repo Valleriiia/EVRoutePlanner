@@ -1,0 +1,100 @@
+@import 'variables';
+
+// Стилі для Leaflet маркерів
+.route-arrow {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.custom-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+// Переозначення стилів Leaflet popup
+.leaflet-popup-content-wrapper {
+  border-radius: $radius-md;
+  box-shadow: $shadow-lg;
+  padding: 0;
+}
+
+.leaflet-popup-content {
+  margin: $spacing-md;
+  min-width: 200px;
+  
+  .station-popup {
+    h4 {
+      margin: 0 0 $spacing-sm 0;
+      color: $gray-800;
+      font-size: $font-size-base;
+      font-weight: 600;
+      padding-bottom: $spacing-sm;
+      border-bottom: 2px solid $gray-200;
+    }
+    
+    p {
+      margin: $spacing-xs 0;
+      font-size: $font-size-sm;
+      color: $gray-600;
+      line-height: 1.6;
+      
+      strong {
+        color: $gray-800;
+        font-weight: 600;
+      }
+    }
+    
+    b {
+      color: $primary-color;
+      font-size: $font-size-lg;
+    }
+  }
+}
+
+.leaflet-popup-tip {
+  background: white;
+}
+
+// Анімація для маркерів
+@keyframes marker-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.leaflet-marker-icon {
+  transition: transform $transition-fast;
+  
+  &:hover {
+    animation: marker-bounce 0.6s ease;
+  }
+}
+
+// Стилі для контролів карти
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: $shadow-md;
+  
+  a {
+    border: none !important;
+    background: $white !important;
+    color: $gray-800 !important;
+    transition: all $transition-fast;
+    
+    &:hover {
+      background: $primary-color !important;
+      color: $white !important;
+    }
+  }
+}
+
+.leaflet-control-attribution {
+  background: rgba($white, 0.8) !important;
+  backdrop-filter: blur(4px);
+  font-size: $font-size-xs;
+  padding: $spacing-xs $spacing-sm !important;
+}

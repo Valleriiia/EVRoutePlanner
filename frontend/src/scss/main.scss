@@ -1,0 +1,529 @@
+@import 'variables';
+@import 'map';
+
+// Reset & Base
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: $font-family;
+  font-size: $font-size-base;
+  line-height: 1.5;
+  color: $gray-900;
+  background-color: $gray-50;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// Container
+.container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+// Header
+.header {
+  background: linear-gradient(135deg, $primary-color 0%, #1e40af 100%);
+  color: $white;
+  padding: $spacing-lg $spacing-xl;
+  box-shadow: $shadow-md;
+
+  &__content {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  &__title {
+    font-size: $font-size-3xl;
+    font-weight: 700;
+    margin-bottom: $spacing-xs;
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+  }
+
+  &__icon {
+    font-size: 2rem;
+    animation: pulse 2s infinite;
+  }
+
+  &__subtitle {
+    font-size: $font-size-lg;
+    opacity: 0.9;
+    font-weight: 300;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+// Main Layout
+.main {
+  display: flex;
+  flex: 1;
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  gap: $spacing-lg;
+  padding: $spacing-lg;
+
+  @media (max-width: $breakpoint-lg) {
+    flex-direction: column;
+  }
+}
+
+// Sidebar
+.sidebar {
+  width: 400px;
+  flex-shrink: 0;
+
+  @media (max-width: $breakpoint-lg) {
+    width: 100%;
+  }
+}
+
+.input-panel {
+  background: $white;
+  border-radius: $radius-xl;
+  padding: $spacing-xl;
+  box-shadow: $shadow-lg;
+  height: fit-content;
+  position: sticky;
+  top: $spacing-lg;
+
+  &__title {
+    font-size: $font-size-2xl;
+    font-weight: 600;
+    margin-bottom: $spacing-lg;
+    color: $gray-800;
+  }
+}
+
+// Form
+.route-form {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.form-label {
+  font-size: $font-size-sm;
+  font-weight: 600;
+  color: $gray-700;
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+
+  &__icon {
+    font-size: $font-size-lg;
+  }
+}
+
+.form-input {
+  padding: $spacing-md;
+  border: 2px solid $gray-200;
+  border-radius: $radius-md;
+  font-size: $font-size-base;
+  transition: all $transition-fast;
+  font-family: $font-family;
+
+  &:focus {
+    outline: none;
+    border-color: $primary-color;
+    box-shadow: 0 0 0 3px rgba($primary-color, 0.1);
+  }
+
+  &--small {
+    padding: $spacing-sm $spacing-md;
+    font-size: $font-size-sm;
+  }
+
+  &::placeholder {
+    color: $gray-400;
+  }
+}
+
+.form-hint {
+  font-size: $font-size-xs;
+  color: $gray-500;
+}
+
+// Battery Input
+.battery-input {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.battery-slider {
+  flex: 1;
+  height: 8px;
+  border-radius: $radius-full;
+  background: $gray-200;
+  outline: none;
+  -webkit-appearance: none;
+
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: $radius-full;
+    background: $primary-color;
+    cursor: pointer;
+    transition: transform $transition-fast;
+
+    &:hover {
+      transform: scale(1.2);
+    }
+  }
+
+  &::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: $radius-full;
+    background: $primary-color;
+    cursor: pointer;
+    border: none;
+  }
+}
+
+.battery-value {
+  font-size: $font-size-lg;
+  font-weight: 700;
+  color: $primary-color;
+  min-width: 50px;
+  text-align: right;
+}
+
+.battery-indicator {
+  height: 30px;
+  background: $gray-100;
+  border-radius: $radius-md;
+  overflow: hidden;
+  border: 2px solid $gray-200;
+
+  &__bar {
+    height: 100%;
+    background: linear-gradient(90deg, $success-color, #34d399);
+    transition: width $transition-base;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: $spacing-sm;
+  }
+}
+
+// Vehicle Params
+.vehicle-params {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-md;
+
+  .param {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+
+    label {
+      font-size: $font-size-xs;
+      color: $gray-600;
+      font-weight: 500;
+    }
+  }
+}
+
+// Buttons
+.form-actions {
+  display: flex;
+  gap: $spacing-md;
+  margin-top: $spacing-md;
+}
+
+.btn {
+  padding: $spacing-md $spacing-lg;
+  border: none;
+  border-radius: $radius-md;
+  font-size: $font-size-base;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all $transition-fast;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  font-family: $font-family;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &--primary {
+    background: $primary-color;
+    color: $white;
+    flex: 1;
+
+    &:hover:not(:disabled) {
+      background: $primary-hover;
+      transform: translateY(-2px);
+      box-shadow: $shadow-md;
+    }
+
+    &:active:not(:disabled) {
+      transform: translateY(0);
+    }
+  }
+
+  &--secondary {
+    background: $gray-200;
+    color: $gray-700;
+
+    &:hover:not(:disabled) {
+      background: $gray-300;
+    }
+  }
+
+  &__icon {
+    font-size: $font-size-lg;
+  }
+}
+
+// Status Message
+.status-message {
+  margin-top: $spacing-lg;
+  padding: $spacing-md;
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+
+  &--loading {
+    background: $info-color;
+    color: $white;
+  }
+
+  &--error {
+    background: $error-color;
+    color: $white;
+  }
+
+  &--success {
+    background: $success-color;
+    color: $white;
+  }
+}
+
+// Route Info
+.route-info {
+  margin-top: $spacing-xl;
+  padding-top: $spacing-xl;
+  border-top: 2px solid $gray-200;
+
+  &__title {
+    font-size: $font-size-xl;
+    font-weight: 600;
+    margin-bottom: $spacing-lg;
+    color: $gray-800;
+  }
+}
+
+.route-stats {
+  display: grid;
+  gap: $spacing-md;
+  margin-bottom: $spacing-lg;
+}
+
+.stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $spacing-md;
+  background: $gray-50;
+  border-radius: $radius-md;
+  border-left: 4px solid $primary-color;
+
+  &__label {
+    font-size: $font-size-sm;
+    color: $gray-600;
+    font-weight: 500;
+  }
+
+  &__value {
+    font-size: $font-size-lg;
+    color: $gray-900;
+    font-weight: 700;
+  }
+}
+
+// Stations List
+.stations-list {
+  margin-top: $spacing-lg;
+
+  &__title {
+    font-size: $font-size-base;
+    font-weight: 600;
+    margin-bottom: $spacing-md;
+    color: $gray-700;
+  }
+}
+
+.station-item {
+  padding: $spacing-md;
+  background: $gray-50;
+  border-radius: $radius-md;
+  margin-bottom: $spacing-sm;
+  border: 1px solid $gray-200;
+
+  &__name {
+    font-weight: 600;
+    color: $gray-800;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__details {
+    font-size: $font-size-sm;
+    color: $gray-600;
+  }
+}
+
+// Map Container
+.map-container {
+  flex: 1;
+  position: relative;
+  border-radius: $radius-xl;
+  overflow: hidden;
+  box-shadow: $shadow-lg;
+  min-height: 600px;
+}
+
+.map {
+  width: 100%;
+  height: 100%;
+  min-height: 600px;
+}
+
+// Стилі для маркерів маршруту
+.route-arrow {
+  background: transparent !important;
+  border: none !important;
+}
+
+.custom-marker {
+  background: transparent;
+  border: none;
+}
+
+// Стилі для popup станцій
+.station-popup {
+  font-family: $font-family;
+  
+  h4 {
+    margin: 0 0 $spacing-sm 0;
+    color: $gray-800;
+    font-size: $font-size-base;
+  }
+  
+  p {
+    margin: $spacing-xs 0;
+    font-size: $font-size-sm;
+    color: $gray-600;
+  }
+}
+
+.map-controls {
+  position: absolute;
+  top: $spacing-md;
+  right: $spacing-md;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  z-index: $z-fixed;
+}
+
+.map-control {
+  width: 40px;
+  height: 40px;
+  background: $white;
+  border: 2px solid $gray-200;
+  border-radius: $radius-md;
+  font-size: $font-size-xl;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all $transition-fast;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: $shadow-md;
+
+  &:hover {
+    background: $primary-color;
+    color: $white;
+    border-color: $primary-color;
+    transform: scale(1.05);
+  }
+}
+
+// Map Loader
+.map-loader {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba($white, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: $z-modal;
+  gap: $spacing-lg;
+
+  p {
+    font-size: $font-size-lg;
+    font-weight: 600;
+    color: $gray-700;
+  }
+}
+
+.loader {
+  width: 60px;
+  height: 60px;
+  border: 6px solid $gray-200;
+  border-top-color: $primary-color;
+  border-radius: $radius-full;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+// Footer
+.footer {
+  background: $gray-800;
+  color: $white;
+  text-align: center;
+  padding: $spacing-lg;
+  margin-top: auto;
+
+  p {
+    font-size: $font-size-sm;
+    opacity: 0.9;
+  }
+}

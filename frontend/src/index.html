@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV Route Planner - Планувальник маршрутів для електромобілів</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header__content">
+                <h1 class="header__title">
+                    <span class="header__icon">⚡</span>
+                    EV Route Planner
+                </h1>
+                <p class="header__subtitle">Оптимальні маршрути для електромобілів</p>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Панель вводу -->
+            <aside class="sidebar">
+                <div class="input-panel">
+                    <h2 class="input-panel__title">Параметри маршруту</h2>
+                    
+                    <form id="routeForm" class="route-form">
+                        <!-- Початкова точка -->
+                        <div class="form-group">
+                            <label for="startPoint" class="form-label">
+                                <span class="form-label__icon">📍</span>
+                                Початкова точка
+                            </label>
+                            <input 
+                                type="text" 
+                                id="startPoint" 
+                                class="form-input"
+                                placeholder="наприклад: Київ, Хрещатик"
+                                required
+                            />
+                            <small class="form-hint">Координати: <span id="startCoords">-</span></small>
+                        </div>
+
+                        <!-- Кінцева точка -->
+                        <div class="form-group">
+                            <label for="endPoint" class="form-label">
+                                <span class="form-label__icon">🏁</span>
+                                Кінцева точка
+                            </label>
+                            <input 
+                                type="text" 
+                                id="endPoint" 
+                                class="form-input"
+                                placeholder="наприклад: Одеса"
+                                required
+                            />
+                            <small class="form-hint">Координати: <span id="endCoords">-</span></small>
+                        </div>
+
+                        <!-- Рівень заряду -->
+                        <div class="form-group">
+                            <label for="batteryLevel" class="form-label">
+                                <span class="form-label__icon">🔋</span>
+                                Рівень заряду батареї
+                            </label>
+                            <div class="battery-input">
+                                <input 
+                                    type="range" 
+                                    id="batteryLevel" 
+                                    class="battery-slider"
+                                    min="10" 
+                                    max="100" 
+                                    value="80"
+                                    step="5"
+                                />
+                                <output id="batteryValue" class="battery-value">80%</output>
+                            </div>
+                            <div class="battery-indicator">
+                                <div id="batteryBar" class="battery-indicator__bar" style="width: 80%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Параметри авто -->
+                        <div class="form-group">
+                            <label class="form-label">
+                                <span class="form-label__icon">🚗</span>
+                                Параметри електромобіля
+                            </label>
+                            <div class="vehicle-params">
+                                <div class="param">
+                                    <label for="batteryCapacity">Ємність (кВт·год)</label>
+                                    <input 
+                                        type="number" 
+                                        id="batteryCapacity" 
+                                        class="form-input form-input--small"
+                                        value="60"
+                                        min="20"
+                                        max="150"
+                                    />
+                                </div>
+                                <div class="param">
+                                    <label for="consumption">Споживання (кВт·год/км)</label>
+                                    <input 
+                                        type="number" 
+                                        id="consumption" 
+                                        class="form-input form-input--small"
+                                        value="0.2"
+                                        step="0.01"
+                                        min="0.1"
+                                        max="0.5"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Кнопки -->
+                        <div class="form-actions">
+                            <button type="submit" id="buildRouteBtn" class="btn btn--primary">
+                                <span class="btn__icon">🗺️</span>
+                                Побудувати маршрут
+                            </button>
+                            <button type="button" id="resetBtn" class="btn btn--secondary">
+                                Очистити
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Статус -->
+                    <div id="statusMessage" class="status-message" style="display: none;"></div>
+
+                    <!-- Результати -->
+                    <div id="routeInfo" class="route-info" style="display: none;">
+                        <h3 class="route-info__title">Характеристики маршруту</h3>
+                        <div class="route-stats">
+                            <div class="stat">
+                                <span class="stat__label">Відстань:</span>
+                                <span class="stat__value" id="totalDistance">-</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat__label">Час в дорозі:</span>
+                                <span class="stat__value" id="travelTime">-</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat__label">Час зарядки:</span>
+                                <span class="stat__value" id="chargingTime">-</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat__label">Зупинок на зарядку:</span>
+                                <span class="stat__value" id="chargingStops">-</span>
+                            </div>
+                        </div>
+
+                        <!-- Список зарядних станцій -->
+                        <div id="stationsList" class="stations-list"></div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Карта -->
+            <section class="map-container">
+                <div id="map" class="map"></div>
+                <div class="map-controls">
+                    <button id="zoomIn" class="map-control" title="Збільшити">+</button>
+                    <button id="zoomOut" class="map-control" title="Зменшити">−</button>
+                    <button id="resetView" class="map-control" title="Початковий вигляд">⌂</button>
+                </div>
+                <div id="mapLoader" class="map-loader" style="display: none;">
+                    <div class="loader"></div>
+                    <p>Побудова маршруту...</p>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>&copy; 2025 EV Route Planner | Курсовий проект | ТВ-33 Непомяща | Data provided by Open Charge Map</p>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/api-client.js"></script>
+    <script src="js/map-renderer.js"></script>
+    <script src="js/ui-controller.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
