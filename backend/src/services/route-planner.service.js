@@ -78,6 +78,23 @@ class RoutePlannerService {
       userInput.batteryLevel
     );
 
+    // ПЕРЕВІРКА: чи є кінцева точка в маршруті
+    const lastPoint = optimizedRoute.points[optimizedRoute.points.length - 1];
+    const endPoint = userInput.getEnd();
+    
+    console.log('🔍 Перевірка маршруту:');
+    console.log(`   Точок в маршруті: ${optimizedRoute.points.length}`);
+    console.log(`   Остання точка: ${lastPoint.lat}, ${lastPoint.lon}`);
+    console.log(`   Кінцева точка: ${endPoint.lat}, ${endPoint.lon}`);
+    
+    // Якщо кінцева точка відсутня - додаємо вручну
+    const pointDistance = lastPoint.distanceTo(endPoint);
+    if (pointDistance > 1) { // > 1 км = різні точки
+      console.log('⚠️ Кінцева точка відсутня в маршруті! Додаємо...');
+      optimizedRoute.addPoint(endPoint);
+      optimizedRoute.calculateStats();
+    }
+
     return optimizedRoute;
   }
 
