@@ -34,13 +34,17 @@
                                 <span class="form-label__icon">📍</span>
                                 Початкова точка
                             </label>
-                            <input 
-                                type="text" 
-                                id="startPoint" 
-                                class="form-input"
-                                placeholder="наприклад: Київ, Хрещатик"
-                                required
-                            />
+                            <div class="autocomplete-wrapper">
+                                <input 
+                                    type="text" 
+                                    id="startPoint" 
+                                    class="form-input"
+                                    placeholder="наприклад: Київ, Хрещатик"
+                                    autocomplete="off"
+                                    required
+                                />
+                                <div id="startSuggestions" class="suggestions-list" style="display: none;"></div>
+                            </div>
                             <small class="form-hint">Координати: <span id="startCoords">-</span></small>
                         </div>
 
@@ -50,13 +54,17 @@
                                 <span class="form-label__icon">🏁</span>
                                 Кінцева точка
                             </label>
-                            <input 
-                                type="text" 
-                                id="endPoint" 
-                                class="form-input"
-                                placeholder="наприклад: Одеса"
-                                required
-                            />
+                            <div class="autocomplete-wrapper">
+                                <input 
+                                    type="text" 
+                                    id="endPoint" 
+                                    class="form-input"
+                                    placeholder="наприклад: Одеса"
+                                    autocomplete="off"
+                                    required
+                                />
+                                <div id="endSuggestions" class="suggestions-list" style="display: none;"></div>
+                            </div>
                             <small class="form-hint">Координати: <span id="endCoords">-</span></small>
                         </div>
 
@@ -176,12 +184,13 @@
 
         <!-- Footer -->
         <footer class="footer">
-            <p>&copy; 2025 EV Route Planner | Курсовий проект | ТВ-33 Непомяща | Data provided by Open Charge Map</p>
+            <p>&copy; 2024 EV Route Planner | Курсовий проект | ТВ-33 Непомяща | Data provided by Open Charge Map</p>
         </footer>
     </div>
 
     <!-- Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/autocomplete.js"></script>
     <script src="js/api-client.js"></script>
     <script src="js/map-renderer.js"></script>
     <script src="js/ui-controller.js"></script>

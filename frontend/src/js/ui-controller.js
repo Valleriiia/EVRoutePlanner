@@ -37,6 +37,22 @@ class UIController {
     this.form.addEventListener('submit', (e) => this.handleFormSubmit(e));
     this.resetBtn.addEventListener('click', () => this.handleReset());
 
+    // Ініціалізація автокомпліту для початкової точки
+    this.startAutocomplete = new AddressAutocomplete(
+      this.startInput,
+      document.getElementById('startSuggestions'),
+      this.apiClient,
+      (result) => this.handleStartSelect(result)
+    );
+
+    // Ініціалізація автокомпліту для кінцевої точки
+    this.endAutocomplete = new AddressAutocomplete(
+      this.endInput,
+      document.getElementById('endSuggestions'),
+      this.apiClient,
+      (result) => this.handleEndSelect(result)
+    );
+
     // Оновлення значення батареї
     this.batterySlider.addEventListener('input', (e) => {
       const value = e.target.value;
@@ -53,10 +69,6 @@ class UIController {
       }
     });
 
-    // Геокодування при втраті фокусу
-    this.startInput.addEventListener('blur', () => this.geocodeStart());
-    this.endInput.addEventListener('blur', () => this.geocodeEnd());
-
     // Кнопки масштабування карти
     document.getElementById('zoomIn')?.addEventListener('click', () => {
       this.mapRenderer.zoomIn();
@@ -72,22 +84,45 @@ class UIController {
   }
 
   /**
-   * Геокодування початкової точки
+   * Обробка вибору початкової точки
+   */
+  handleStartSelect(result) {
+    this.startCoords = result;
+    document.getElementById('startCoords').textContent = 
+      `${result.lat.toFixed(4)}, ${result.lon.toFixed(4)}`;
+    
+    // Показуємо на карті
+    this.mapRenderer.setView(result.lat, result.lon, 13);
+    
+    console.log('✅ Початкову точку обрано:', result);
+  }
+
+  /**
+   * Обробка вибору кінцевої точки
+   */
+  handleEndSelect(result) {
+    this.endCoords = result;
+    document.getElementById('endCoords').textContent = 
+      `${result.lat.toFixed(4)}, ${result.lon.toFixed(4)}`;
+    
+    // Показуємо на карті
+    this.mapRenderer.setView(result.lat, result.lon, 13);
+    
+    console.log('✅ Кінцеву точку обрано:', result);
+  }
+
+  /**
+   * Геокодування початкової точки (fallback)
    */
   async geocodeStart() {
     const address = this.startInput.value.trim();
-    if (!address) return;
+    if (!address || this.startCoords) return; // Якщо вже обрано через autocomplete
 
     try {
       this.showStatus('Пошук адреси...', 'loading');
       const result = await this.apiClient.geocodeAddress(address);
-      this.startCoords = result;
-      
-      document.getElementById('startCoords').textContent = 
-        `${result.lat.toFixed(4)}, ${result.lon.toFixed(4)}`;
-      
+      this.handleStartSelect(result);
       this.hideStatus();
-      console.log('✅ Початкову адресу знайдено:', result);
     } catch (error) {
       this.showStatus(`Помилка: ${error.message}`, 'error');
       console.error('❌ Помилка геокодування:', error);
@@ -95,22 +130,17 @@ class UIController {
   }
 
   /**
-   * Геокодування кінцевої точки
+   * Геокодування кінцевої точки (fallback)
    */
   async geocodeEnd() {
     const address = this.endInput.value.trim();
-    if (!address) return;
+    if (!address || this.endCoords) return; // Якщо вже обрано через autocomplete
 
     try {
       this.showStatus('Пошук адреси...', 'loading');
       const result = await this.apiClient.geocodeAddress(address);
-      this.endCoords = result;
-      
-      document.getElementById('endCoords').textContent = 
-        `${result.lat.toFixed(4)}, ${result.lon.toFixed(4)}`;
-      
+      this.handleEndSelect(result);
       this.hideStatus();
-      console.log('✅ Кінцеву адресу знайдено:', result);
     } catch (error) {
       this.showStatus(`Помилка: ${error.message}`, 'error');
       console.error('❌ Помилка геокодування:', error);
@@ -269,6 +299,11 @@ class UIController {
     this.form.reset();
     this.startCoords = null;
     this.endCoords = null;
+    
+    // Очищуємо автокомпліти
+    if (this.startAutocomplete) this.startAutocomplete.clear();
+    if (this.endAutocomplete) this.endAutocomplete.clear();
+    
     document.getElementById('startCoords').textContent = '-';
     document.getElementById('endCoords').textContent = '-';
     this.batteryValue.textContent = '80%';

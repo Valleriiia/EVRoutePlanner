@@ -53,6 +53,68 @@ class APIClient {
   }
 
   /**
+   * Пошук адрес з підказками (autocomplete)
+   * @param {string} query - Пошуковий запит
+   * @param {number} limit - Максимальна кількість результатів
+   * @returns {Promise<Array>} - Масив варіантів адрес
+   */
+  async searchAddresses(query, limit = 5) {
+    try {
+      if (!query || query.length < 3) {
+        return [];
+      }
+
+      // Використовуємо Nominatim search API
+      const encodedQuery = encodeURIComponent(query);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&limit=${limit}&countrycodes=ua&addressdetails=1`
+      );
+
+      if (!response.ok) {
+        throw new Error('Помилка пошуку адрес');
+      }
+
+      const data = await response.json();
+      
+      // Форматуємо результати
+      return data.map(item => ({
+        displayName: item.display_name,
+        name: item.name || item.display_name.split(',')[0],
+        lat: parseFloat(item.lat),
+        lon: parseFloat(item.lon),
+        type: this.getLocationType(item.type),
+        address: {
+          city: item.address?.city || item.address?.town || item.address?.village,
+          state: item.address?.state,
+          country: item.address?.country
+        },
+        importance: item.importance || 0
+      }));
+    } catch (error) {
+      console.error('Autocomplete Error:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Визначення типу локації
+   */
+  getLocationType(osmType) {
+    const types = {
+      'city': '🏙️ Місто',
+      'town': '🏘️ Місто',
+      'village': '🏡 Село',
+      'hamlet': '🏡 Селище',
+      'road': '🛣️ Вулиця',
+      'house': '🏠 Будинок',
+      'administrative': '📍 Регіон',
+      'suburb': '🏙️ Район',
+      'neighbourhood': '🏘️ Мікрорайон'
+    };
+    return types[osmType] || '📍 Місце';
+  }
+
+  /**
    * Геокодування адреси в координати
    * @param {string} address - Адреса
    * @returns {Promise<Object>} - Координати {lat, lon}
