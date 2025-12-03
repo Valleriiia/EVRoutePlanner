@@ -1,5 +1,6 @@
 /**
  * Map Renderer для відображення маршрутів на карті
+ * ОНОВЛЕНО: Підтримка геометрії з OSRM
  */
 class MapRenderer {
   constructor(mapElementId) {
@@ -19,17 +20,14 @@ class MapRenderer {
    */
   initMap() {
     try {
-      // Створення карти з Leaflet
       this.map = L.map(this.mapElementId).setView(this.defaultCenter, this.defaultZoom);
 
-      // Додавання тайлів OpenStreetMap
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors',
         maxZoom: 18,
         minZoom: 3
       }).addTo(this.map);
 
-      // Створення шарів для маркерів
       this.routeLayer = L.layerGroup().addTo(this.map);
       this.markersLayer = L.layerGroup().addTo(this.map);
       this.chargingStationsLayer = L.layerGroup().addTo(this.map);
@@ -43,7 +41,7 @@ class MapRenderer {
 
   /**
    * Відображення маршруту на карті
-   * @param {Object} routeData - Дані маршруту
+   * ОНОВЛЕНО: Підтримка геометрії з OSRM
    */
   renderRoute(routeData) {
     this.clearRoute();
@@ -56,33 +54,33 @@ class MapRenderer {
     const points = routeData.points;
     const chargingStops = routeData.chargingStops || [];
 
-    // Відображення лінії маршруту
-    const latLngs = points.map(point => [point.lat, point.lon]);
-    const polyline = L.polyline(latLngs, {
-      color: '#2563eb',
-      weight: 4,
-      opacity: 0.8,
-      smoothFactor: 1
-    }).addTo(this.routeLayer);
+    // НОВЕ: Використовуємо геометрію з OSRM якщо доступна
+    if (routeData.geometry && routeData.geometry.coordinates) {
+      console.log('🗺️ Використання геометрії з OSRM');
+      this.renderRoadRoute(routeData.geometry.coordinates, routeData.stats);
+    } 
+    // Альтернатива: Пряма лінія між точками
+    else {
+      console.log('📏 Використання прямих ліній');
+      const latLngs = points.map(point => [point.lat, point.lon]);
+      this.renderStraightRoute(latLngs);
+    }
 
-    // Додавання стрілок напрямку
-    this.addArrowsToPolyline(polyline);
-
-    // Початковий маркер (зелений)
+    // Початковий маркер
     const startPoint = points[0];
     L.marker([startPoint.lat, startPoint.lon], {
       icon: this.createCustomIcon('🚗', '#10b981')
     }).addTo(this.markersLayer)
       .bindPopup(`<b>Початок</b><br>${startPoint.address || 'Початкова точка'}`);
 
-    // Кінцевий маркер (червоний)
+    // Кінцевий маркер
     const endPoint = points[points.length - 1];
     L.marker([endPoint.lat, endPoint.lon], {
       icon: this.createCustomIcon('🏁', '#ef4444')
     }).addTo(this.markersLayer)
       .bindPopup(`<b>Кінець</b><br>${endPoint.address || 'Кінцева точка'}`);
 
-    // Зарядні станції (блакитні)
+    // Зарядні станції
     chargingStops.forEach((station, index) => {
       const loc = station.location;
       L.marker([loc.lat, loc.lon], {
@@ -99,17 +97,126 @@ class MapRenderer {
         `);
     });
 
-    // Автоматичне масштабування карти до маршруту
-    this.fitBounds(latLngs);
+    // Автоматичне масштабування
+    this.fitRouteToView();
 
     console.log('✅ Маршрут відображено на карті');
   }
 
   /**
+   * НОВЕ: Відображення маршруту по дорогах (з OSRM)
+   */
+  renderRoadRoute(coordinates, stats) {
+    // Конвертуємо [lon, lat] в [lat, lon] для Leaflet
+    const latLngs = coordinates.map(coord => [coord[1], coord[0]]);
+
+    const polyline = L.polyline(latLngs, {
+      color: '#2563eb',
+      weight: 5,
+      opacity: 0.7,
+      smoothFactor: 1,
+      className: 'road-route'
+    }).addTo(this.routeLayer);
+
+    // Додаємо tooltip з інформацією
+    if (stats) {
+      polyline.bindTooltip(`
+        <b>Маршрут по дорогах</b><br>
+        Відстань: ${stats.distance.toFixed(1)} км<br>
+        Час: ${this.formatDuration(stats.time)}
+      `, { sticky: true });
+    }
+
+    // Додаємо стрілки напрямку
+    // this.addDirectionArrows(latLngs);
+  }
+
+  /**
+   * Відображення прямого маршруту (fallback)
+   */
+  renderStraightRoute(latLngs) {
+    const polyline = L.polyline(latLngs, {
+      color: '#64748b',
+      weight: 4,
+      opacity: 0.6,
+      dashArray: '10, 10', // Пунктирна лінія
+      smoothFactor: 1,
+      className: 'straight-route'
+    }).addTo(this.routeLayer);
+
+    polyline.bindTooltip(
+      '<b>Приблизний маршрут</b><br>(пряма лінія)', 
+      { sticky: true }
+    );
+  }
+
+  /**
+   * НОВЕ: Додавання стрілок напрямку
+   */
+  addDirectionArrows(latLngs) {
+    // Додаємо стрілку кожні N точок
+    const step = Math.max(1, Math.floor(latLngs.length / 8)); // ~8 стрілок
+
+    for (let i = step; i < latLngs.length; i += step) {
+      const start = latLngs[i - 1];
+      const end = latLngs[i];
+      
+      // Розрахунок кута
+      const angle = Math.atan2(
+        end[0] - start[0], 
+        end[1] - start[1]
+      ) * 180 / Math.PI;
+      
+      const arrowIcon = L.divIcon({
+        className: 'route-arrow',
+        html: `
+          <div style="
+            transform: rotate(${angle}deg);
+            color: #2563eb;
+            font-size: 16px;
+            text-shadow: 0 0 3px white;
+          ">▲</div>
+        `,
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
+      });
+      
+      L.marker(start, { 
+        icon: arrowIcon, 
+        interactive: false 
+      }).addTo(this.routeLayer);
+    }
+  }
+
+  /**
+   * Форматування тривалості
+   */
+  formatDuration(hours) {
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    
+    if (h > 0) {
+      return `${h} год ${m} хв`;
+    }
+    return `${m} хв`;
+  }
+
+  /**
+   * Автоматичне масштабування до маршруту
+   */
+  fitRouteToView() {
+    try {
+      const bounds = this.routeLayer.getBounds();
+      if (bounds.isValid()) {
+        this.map.fitBounds(bounds, { padding: [50, 50] });
+      }
+    } catch (error) {
+      console.warn('⚠️ Не вдалося масштабувати до маршруту');
+    }
+  }
+
+  /**
    * Створення власної іконки маркера
-   * @param {string} emoji - Емодзі для іконки
-   * @param {string} color - Колір фону
-   * @returns {L.DivIcon}
    */
   createCustomIcon(emoji, color) {
     return L.divIcon({
@@ -140,81 +247,12 @@ class MapRenderer {
   }
 
   /**
-   * Додавання стрілок напрямку до лінії
-   * @param {L.Polyline} polyline
-   */
-  addArrowsToPolyline(polyline) {
-    // Простіша реалізація без додаткових бібліотек
-    // Додаємо маркери зі стрілками вздовж маршруту
-    const latlngs = polyline.getLatLngs();
-    
-    // Додаємо стрілку на кожному 5-му сегменті
-    for (let i = 5; i < latlngs.length; i += 5) {
-      if (i >= latlngs.length - 1) break;
-      
-      const start = latlngs[i - 1];
-      const end = latlngs[i];
-      
-      // Розрахунок кута
-      const angle = Math.atan2(end.lat - start.lat, end.lng - start.lng) * 180 / Math.PI;
-      
-      // Створення маркера зі стрілкою
-      const arrowIcon = L.divIcon({
-        className: 'route-arrow',
-        html: `<div style="transform: rotate(${angle + 90}deg); color: #2563eb; font-size: 20px;">▼</div>`,
-        iconSize: [20, 20],
-        iconAnchor: [10, 10]
-      });
-      
-      L.marker([start.lat, start.lng], { icon: arrowIcon, interactive: false })
-        .addTo(this.routeLayer);
-    }
-  }
-
-  /**
-   * Відображення всіх доступних зарядних станцій
-   * @param {Array} stations
-   */
-  showAllChargingStations(stations) {
-    stations.forEach(station => {
-      const loc = station.location;
-      L.circleMarker([loc.lat, loc.lon], {
-        radius: 6,
-        fillColor: '#06b6d4',
-        color: '#fff',
-        weight: 2,
-        opacity: 1,
-        fillOpacity: 0.8
-      }).addTo(this.chargingStationsLayer)
-        .bindPopup(`
-          <div class="station-popup">
-            <h4>Зарядна станція</h4>
-            <p><strong>ID:</strong> ${station.id}</p>
-            <p><strong>Потужність:</strong> ${station.powerKw} кВт</p>
-            <p><strong>Адреса:</strong> ${loc.address}</p>
-          </div>
-        `);
-    });
-  }
-
-  /**
    * Очищення маршруту з карти
    */
   clearRoute() {
     if (this.routeLayer) this.routeLayer.clearLayers();
     if (this.markersLayer) this.markersLayer.clearLayers();
     if (this.chargingStationsLayer) this.chargingStationsLayer.clearLayers();
-  }
-
-  /**
-   * Автоматичне масштабування до точок
-   * @param {Array} latLngs - Масив координат
-   */
-  fitBounds(latLngs) {
-    if (latLngs && latLngs.length > 0) {
-      const bounds = L.latLngBounds(latLngs);
-      this.map.fitBounds(bounds, { padding: [50, 50] });
-    }
   }
 
   /**
@@ -242,9 +280,6 @@ class MapRenderer {
 
   /**
    * Встановлення центру карти
-   * @param {number} lat
-   * @param {number} lon
-   * @param {number} zoom
    */
   setView(lat, lon, zoom = 13) {
     if (this.map) {
@@ -253,7 +288,7 @@ class MapRenderer {
   }
 }
 
-// Експорт для використання
+// Експорт
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = MapRenderer;
 }

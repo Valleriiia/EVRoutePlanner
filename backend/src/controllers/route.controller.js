@@ -70,7 +70,7 @@ exports.buildRoute = async (req, res, next) => {
  */
 exports.getChargingStations = async (req, res, next) => {
   try {
-    const stations = chargingStationService.getAllStations();
+    const stations = await chargingStationService.getAllStations();
 
     res.json({
       success: true,
@@ -108,7 +108,7 @@ exports.getNearbyStations = async (req, res, next) => {
     }
 
     const location = new Location(parseFloat(lat), parseFloat(lon));
-    const stations = chargingStationService.findStationsNear(
+    const stations = await chargingStationService.findStationsNear(
       location,
       parseFloat(radius)
     );
