@@ -2,7 +2,7 @@ const Chromosome = require('../models/Chromosome');
 const ChargingStation = require('../models/ChargingStation');
 
 class GeneticAlgorithmService {
-  constructor(populationSize = 50, generations = 100, mutationRate = 0.15) {
+  constructor(populationSize = 50, generations = 150, mutationRate = 0.15) {
     this.populationSize = populationSize;
     this.generations = generations;
     this.mutationRate = mutationRate;
@@ -19,14 +19,19 @@ class GeneticAlgorithmService {
     
     console.log(`   Пряма відстань: ${directDistance.toFixed(2)} км`);
     
-    // ВАЖЛИВО: НЕ фільтруємо станції тут, використовуємо всі доступні
-    // Фільтрація вже пройшла в route-planner.service
-    const relevantStations = availableStations;
+    // КРИТИЧНО: Фільтруємо тільки релевантні станції
+    const relevantStations = this.filterRelevantStations(
+      start, 
+      end, 
+      availableStations, 
+      vehicle, 
+      startBatteryLevel
+    );
     
-    console.log(`   Використовуємо всі ${relevantStations.length} станцій для оптимізації`);
+    console.log(`   Релевантних станцій після фільтрації: ${relevantStations.length}`);
     
     if (relevantStations.length === 0) {
-      console.log('⚠️ Немає станцій для маршруту');
+      console.log('⚠️ Немає релевантних станцій для маршруту');
       return this.createSimpleRoute(start, end);
     }
     
@@ -73,7 +78,7 @@ class GeneticAlgorithmService {
       }
 
       // Рання зупинка якщо немає покращень
-      if (generationsWithoutImprovement > 30) {
+      if (generationsWithoutImprovement > 50) {
         console.log(`⚡ Рання зупинка на поколінні ${generation} (немає покращень)`);
         break;
       }
@@ -81,8 +86,19 @@ class GeneticAlgorithmService {
       // Створення нового покоління
       const newPopulation = [];
       
-      // Елітизм: зберігаємо топ 10%
-      const eliteCount = Math.floor(this.populationSize * 0.1);
+      // НОВИЙ: Збільшений елітизм для малої кількості станцій
+      const stationCount = population[0].genes.filter(g => g instanceof ChargingStation).length;
+      let eliteCount;
+      
+      if (stationCount <= 2) {
+        eliteCount = Math.floor(this.populationSize * 0.3); // 30% для 1-2 станцій
+      } else if (stationCount <= 3) {
+        eliteCount = Math.floor(this.populationSize * 0.2); // 20% для 3 станцій
+      } else {
+        eliteCount = Math.floor(this.populationSize * 0.1); // 10% для решти
+      }
+      
+      // Елітизм: зберігаємо топ
       for (let i = 0; i < eliteCount; i++) {
         newPopulation.push(population[i].clone());
       }
@@ -112,33 +128,39 @@ class GeneticAlgorithmService {
   }
 
   /**
-   * Фільтрація релевантних станцій
+   * ПОКРАЩЕНА ЛОГІКА: М'якша фільтрація релевантних станцій
+   * Залишає більше станцій для генетичного алгоритму
    */
   filterRelevantStations(start, end, stations, vehicle, batteryLevel) {
     const directDistance = start.distanceTo(end);
-    const maxRange = vehicle.getRemainingRange(batteryLevel);
+    const maxRange = vehicle.getRemainingRange(100); // Після повної зарядки
     
     // Якщо можемо доїхати напряму - не потрібні станції
     if (directDistance <= maxRange * 0.85) {
       return [];
     }
     
-    console.log(`   🔍 Фільтрація: пряма відстань ${directDistance.toFixed(0)} км, макс запас ${maxRange.toFixed(0)} км`);
+    console.log(`   🔍 М'яка фільтрація станцій:`);
+    console.log(`      Пряма відстань: ${directDistance.toFixed(0)} км`);
+    console.log(`      Макс запас після зарядки: ${maxRange.toFixed(0)} км`);
     
-    // Фільтруємо станції по базовим критеріям
+    // НОВИЙ ПІДХІД: М'якша фільтрація, залишаємо більше станцій
     const validStations = stations.filter(station => {
       const toStation = start.distanceTo(station.location);
       const fromStation = station.location.distanceTo(end);
       
-      // Перевірка 1: Станція не має бути надто далеко від прямої лінії (200 км об'їзду)
+      // Перевірка 1: М'якший ліміт об'їзду (50% або 200км)
       const detour = (toStation + fromStation) - directDistance;
-      if (detour > 200) {
+      const maxDetour = Math.max(200, directDistance * 0.5); // Збільшили до 50%
+      
+      if (detour > maxDetour) {
         return false;
       }
       
-      // Перевірка 2: Станція має бути в "коридорі" маршруту (±100 км для довгих маршрутів)
+      // Перевірка 2: Розширений коридор (40% або 150км)
       const distanceToLine = this.distanceToLine(start, end, station.location);
-      const corridorWidth = directDistance > 400 ? 100 : 50;
+      const corridorWidth = Math.max(150, directDistance * 0.4); // Збільшили до 40%
+      
       if (distanceToLine > corridorWidth) {
         return false;
       }
@@ -146,14 +168,41 @@ class GeneticAlgorithmService {
       return true;
     });
 
-    console.log(`   ✓ Після базової фільтрації: ${validStations.length} станцій`);
+    console.log(`      ✓ Після м'якої фільтрації: ${validStations.length} станцій`);
 
-    // НОВЕ: Видаляємо дублікати
+    // М'якше видалення дублікатів (тільки дуже близькі, < 10 км)
     const filteredStations = this.removeDuplicateStations(validStations, 10);
     
-    console.log(`   ✓ Після видалення дублікатів: ${filteredStations.length} станцій`);
+    console.log(`      ✓ Після видалення дублікатів: ${filteredStations.length} станцій`);
     
-    return filteredStations;
+    // Сортуємо по відстані від початку
+    return filteredStations.sort((a, b) => 
+      start.distanceTo(a.location) - start.distanceTo(b.location)
+    );
+  }
+
+  /**
+   * М'якше видалення дублікатів станцій
+   */
+  removeDuplicateStations(stations, minDistanceKm = 10) {
+    const result = [];
+    
+    // Сортуємо по потужності (спочатку найпотужніші)
+    const sorted = [...stations].sort((a, b) => b.powerKw - a.powerKw);
+    
+    for (const station of sorted) {
+      // Перевіряємо чи є вже близька станція
+      const hasDuplicate = result.some(existing => {
+        const distance = existing.location.distanceTo(station.location);
+        return distance < minDistanceKm;
+      });
+      
+      if (!hasDuplicate) {
+        result.push(station);
+      }
+    }
+    
+    return result;
   }
 
   /**
@@ -194,95 +243,158 @@ class GeneticAlgorithmService {
   }
 
   /**
-   * Ініціалізація популяції з розумним підходом
+   * ПОКРАЩЕНА ініціалізація популяції
+   * Враховує що ланцюжок вже оптимізований
    */
   initializePopulation(start, end, stations, vehicle, batteryLevel) {
     const population = [];
     const directDistance = start.distanceTo(end);
-    const maxRange = vehicle.getRemainingRange(100); // Запас після ПОВНОЇ зарядки
+    const maxRangePerCharge = vehicle.getRemainingRange(100) * 0.75; // 75% для безпеки
     
-    // Реалістична оцінка: скільки разів потрібно зарядитись
-    // При повній зарядці можна проїхати ~300 км, між зарядками ~250 км (з запасом)
-    const chargingInterval = 250;
-    const estimatedStops = Math.max(1, Math.ceil(directDistance / chargingInterval));
+    // Оцінка необхідної кількості зарядок
+    const estimatedStops = Math.max(1, Math.ceil(directDistance / maxRangePerCharge));
     
-    console.log(`   📊 Оцінка зупинок: ${estimatedStops} (відстань ${directDistance.toFixed(0)} км, інтервал ${chargingInterval} км)`);
-    console.log(`   📊 Доступно станцій: ${stations.length}`);
-    console.log(`   📊 Запас після зарядки: ${maxRange.toFixed(0)} км`);
+    console.log(`   📊 Ініціалізація популяції:`);
+    console.log(`      Оцінка зупинок: ${estimatedStops}`);
+    console.log(`      Доступно станцій: ${stations.length}`);
     
-    // Сортуємо станції по відстані від початку
-    const sortedStations = [...stations].sort((a, b) => {
-      return start.distanceTo(a.location) - start.distanceTo(b.location);
-    });
-    
-    // Якщо станцій мало або рівно стільки скільки потрібно - використовуємо всі
-    const useAllStations = stations.length <= estimatedStops + 1;
-    
-    for (let i = 0; i < this.populationSize; i++) {
-      const genes = [start];
+    // НОВИЙ ПІДХІД: Якщо станцій мало - використовуємо всі можливі комбінації
+    if (stations.length <= 5) {
+      console.log(`      Стратегія: Використання всіх комбінацій (мало станцій)`);
       
-      if (useAllStations) {
-        // Якщо станцій мало - використовуємо всі або майже всі
-        if (Math.random() < 0.8) {
-          // 80% - всі станції
-          genes.push(...sortedStations);
+      // Генеруємо всі можливі підмножини
+      for (let i = 0; i < this.populationSize; i++) {
+        const genes = [start];
+        
+        if (i === 0) {
+          // Варіант 1: Всі станції (найбезпечніший)
+          genes.push(...stations);
+        } else if (i < this.populationSize * 0.5) {
+          // 50%: Всі станції в різному порядку
+          const shuffled = [...stations].sort(() => Math.random() - 0.5);
+          shuffled.sort((a, b) => start.distanceTo(a.location) - start.distanceTo(b.location));
+          genes.push(...shuffled);
+        } else if (i < this.populationSize * 0.7) {
+          // 20%: Видаляємо максимум 1 станцію (якщо їх більше 2)
+          if (stations.length > 2) {
+            const toRemove = Math.floor(Math.random() * stations.length);
+            const filtered = stations.filter((_, idx) => idx !== toRemove);
+            filtered.sort((a, b) => start.distanceTo(a.location) - start.distanceTo(b.location));
+            genes.push(...filtered);
+          } else {
+            genes.push(...stations);
+          }
         } else {
-          // 20% - випадкова підмножина (але не менше estimatedStops)
-          const count = Math.max(estimatedStops, Math.floor(stations.length * 0.7));
-          const shuffled = [...sortedStations].sort(() => Math.random() - 0.5);
-          const selected = shuffled.slice(0, count);
+          // 30%: Випадкова підмножина (мінімум estimatedStops)
+          const count = Math.max(estimatedStops, stations.length - 1);
+          const selected = this.selectRandomSubset(stations, count);
           selected.sort((a, b) => start.distanceTo(a.location) - start.distanceTo(b.location));
           genes.push(...selected);
         }
-      } else {
-        // Якщо станцій багато - вибираємо розумно
-        if (i < this.populationSize * 0.4) {
-          // 40% популяції: рівномірний розподіл (крок по stations)
-          const step = Math.max(1, Math.floor(sortedStations.length / estimatedStops));
-          for (let j = 0; j < estimatedStops && j * step < sortedStations.length; j++) {
-            genes.push(sortedStations[j * step]);
-          }
-        } else if (i < this.populationSize * 0.7) {
-          // 30% популяції: estimatedStops +/- 1
-          const count = estimatedStops + (Math.random() < 0.5 ? -1 : 1);
-          const actualCount = Math.max(1, Math.min(count, sortedStations.length));
-          const selected = [...sortedStations]
-            .sort(() => Math.random() - 0.5)
-            .slice(0, actualCount);
-          
-          selected.sort((a, b) => 
-            start.distanceTo(a.location) - start.distanceTo(b.location)
-          );
-          
+        
+        genes.push(end);
+        population.push(new Chromosome(genes));
+      }
+    } else {
+      // Стандартний підхід для багатьох станцій
+      console.log(`      Стратегія: Різні підходи для різноманітності`);
+      
+      for (let i = 0; i < this.populationSize; i++) {
+        const genes = [start];
+        
+        if (i < this.populationSize * 0.2) {
+          // 20%: Всі станції
+          genes.push(...stations);
+        } else if (i < this.populationSize * 0.4) {
+          // 20%: Рівномірний розподіл
+          const selected = this.selectEvenlyDistributed(stations, estimatedStops);
+          genes.push(...selected);
+        } else if (i < this.populationSize * 0.6) {
+          // 20%: Найближчі до лінії
+          const selected = this.selectNearestToLine(stations, start, end, estimatedStops);
+          genes.push(...selected);
+        } else if (i < this.populationSize * 0.8) {
+          // 20%: По потужності
+          const selected = this.selectByPower(stations, estimatedStops);
           genes.push(...selected);
         } else {
-          // 30% популяції: повністю випадковий вибір
-          const count = Math.floor(Math.random() * (estimatedStops + 2)) + 1;
-          const actualCount = Math.min(count, sortedStations.length);
-          const selected = [...sortedStations]
-            .sort(() => Math.random() - 0.5)
-            .slice(0, actualCount);
-          
-          selected.sort((a, b) => 
-            start.distanceTo(a.location) - start.distanceTo(b.location)
-          );
-          
+          // 20%: Випадковий вибір
+          const count = Math.max(estimatedStops, Math.floor(stations.length * 0.6));
+          const selected = this.selectRandomSubset(stations, count);
+          selected.sort((a, b) => start.distanceTo(a.location) - start.distanceTo(b.location));
           genes.push(...selected);
         }
+        
+        genes.push(end);
+        population.push(new Chromosome(genes));
       }
-      
-      genes.push(end);
-      population.push(new Chromosome(genes));
     }
     
-    // Логування статистики початкової популяції
-    const avgStations = population.reduce((sum, c) => 
-      sum + c.genes.filter(g => g instanceof ChargingStation).length, 0
-    ) / population.length;
-    
-    console.log(`   ✓ Популяція створена: середньо ${avgStations.toFixed(1)} станцій на хромосому`);
-    
     return population;
+  }
+
+  /**
+   * Вибір випадкової підмножини
+   */
+  selectRandomSubset(stations, count) {
+    const shuffled = [...stations].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, Math.min(count, stations.length));
+  }
+
+  /**
+   * Вибір станцій рівномірно розподілених по маршруту
+   */
+  selectEvenlyDistributed(stations, count) {
+    if (stations.length <= count) return [...stations];
+    
+    const step = stations.length / count;
+    const selected = [];
+    
+    for (let i = 0; i < count; i++) {
+      const index = Math.floor(i * step);
+      selected.push(stations[index]);
+    }
+    
+    return selected;
+  }
+
+  /**
+   * Вибір станцій найближчих до прямої лінії маршруту
+   */
+  selectNearestToLine(stations, start, end, count) {
+    const sorted = [...stations].sort((a, b) => {
+      const distA = this.distanceToLine(start, end, a.location);
+      const distB = this.distanceToLine(start, end, b.location);
+      return distA - distB;
+    });
+    
+    return sorted.slice(0, Math.min(count, sorted.length));
+  }
+
+  /**
+   * Вибір найпотужніших станцій
+   */
+  selectByPower(stations, count) {
+    const sorted = [...stations].sort((a, b) => b.powerKw - a.powerKw);
+    return sorted.slice(0, Math.min(count, sorted.length));
+  }
+
+  /**
+   * Вибір найкращих станцій (комбінований підхід)
+   */
+  selectBestStations(stations, start, end, count) {
+    const scored = stations.map(station => {
+      const distToLine = this.distanceToLine(start, end, station.location);
+      const distFromStart = start.distanceTo(station.location);
+      
+      // Чим ближче до лінії і чим потужніша - тим краще
+      const score = (1000 / (distToLine + 1)) + (station.powerKw / 10) - (distFromStart / 100);
+      
+      return { station, score };
+    });
+    
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, Math.min(count, scored.length)).map(s => s.station);
   }
 
   tournamentSelection(population, tournamentSize = 5) {

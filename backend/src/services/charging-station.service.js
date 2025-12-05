@@ -141,6 +141,42 @@ class ChargingStationService {
   }
 
   /**
+ * НОВИЙ: Отримання станцій поблизу точки (для низького заряду)
+ * @param {Location} location - Точка
+ * @param {number} radiusKm - Радіус в км
+ * @returns {Promise<Array>} - Масив станцій
+ */
+async getStationsNearby(location, radiusKm = 50) {
+  if (this.useRealData) {
+    try {
+      console.log(`🔍 Пошук станцій поблизу (${radiusKm} км)...`);
+      const realStations = await this.openChargeMap.getStationsNearby(
+        location.lat,
+        location.lon,
+        radiusKm,
+        20 // Макс 20 найближчих
+      );
+      
+      if (realStations && realStations.length > 0) {
+        return this.sortByDistanceFromStart(realStations, location);
+      }
+      
+      console.log('⚠️ Реальних станцій не знайдено, використовуємо тестові');
+    } catch (error) {
+      console.error('❌ Помилка:', error.message);
+    }
+  }
+
+  // Fallback до тестових даних
+  const nearby = this.testStations.filter(station => {
+    const distance = location.distanceTo(station.location);
+    return distance <= radiusKm;
+  });
+  
+  return this.sortByDistanceFromStart(nearby, location);
+}
+
+  /**
    * Отримання всіх станцій (для відображення на карті)
    */
   async getAllStations() {
