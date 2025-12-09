@@ -95,151 +95,181 @@ class RoutePlannerService {
 
     // КРОК 4: НОВА ЛОГІКА - Перевірка досяжності першої станції
     const firstReachableStation = this.findFirstReachableStation(
-      availableStations, 
-      start, 
-      vehicle, 
-      batteryLevel
-    );
+    availableStations, 
+    start, 
+    vehicle, 
+    batteryLevel
+  );
 
-    if (!firstReachableStation) {
-      // НОВИЙ ПІДХІД: Шукаємо станцію ПОБЛИЗУ старту (в радіусі 50 км)
-      console.log('❌ Жодна станція на маршруті не досяжна');
-      console.log('🔍 Пошук станції поблизу старту...');
+  if (!firstReachableStation) {
+    // НОВИЙ ПІДХІД: Шукаємо станцію ПОБЛИЗУ старту (в радіусі 50 км)
+    console.log('❌ Жодна станція на маршруті не досяжна');
+    console.log('🔍 Пошук станції поблизу старту...');
+    
+    const nearbyStations = await this.stationService.getStationsNearby(
+      start,
+      50 // 50 км радіус
+    );
+    
+    const nearbyReachable = nearbyStations.filter(station => {
+      const dist = start.distanceTo(station.location);
+      return dist <= vehicle.getRemainingRange(batteryLevel) * 0.95;
+    });
+    
+    if (nearbyReachable.length > 0) {
+      const nearest = nearbyReachable[0];
+      const nearestDist = start.distanceTo(nearest.location);
       
-      const nearbyStations = await this.stationService.getStationsNearby(
+      console.log(`✅ Знайдено станцію поблизу: ${nearest.id} на відстані ${nearestDist.toFixed(1)} км`);
+      console.log(`🔄 Автоматично додаємо станцію до маршруту...`);
+      
+      // НОВИЙ ПІДХІД: Додаємо станцію до списку і будуємо маршрут
+      const extendedStations = [nearest, ...availableStations];
+      
+      console.log(`⚡ Розширений список: ${extendedStations.length} станцій (додана поблизу старту)`);
+      
+      // Будуємо ланцюжок з новою станцією
+      const reachableStations = this.buildStationChain(
+        extendedStations,
         start,
-        50 // 50 км радіус
+        end,
+        vehicle,
+        batteryLevel
       );
       
-      const nearbyReachable = nearbyStations.filter(station => {
-        const dist = start.distanceTo(station.location);
-        return dist <= vehicle.getRemainingRange(batteryLevel) * 0.95;
-      });
-      
-      if (nearbyReachable.length > 0) {
-        const nearest = nearbyReachable[0];
-        const nearestDist = start.distanceTo(nearest.location);
-        
-        console.log(`✅ Знайдено станцію поблизу: ${nearest.id} на відстані ${nearestDist.toFixed(1)} км`);
-        console.log(`🔄 Автоматично додаємо станцію до маршруту...`);
-        
-        // НОВИЙ ПІДХІД: Додаємо станцію до списку і будуємо маршрут
-        const extendedStations = [nearest, ...availableStations];
-        
-        console.log(`⚡ Розширений список: ${extendedStations.length} станцій (додана поблизу старту)`);
-        
-        // Будуємо ланцюжок з новою станцією
-        const reachableStations = this.buildStationChain(
-          extendedStations,
+      // КРИТИЧНО: Перевіряємо чи вдалося побудувати ланцюжок
+      if (reachableStations.length === 0) {
+        console.log('❌ КРИТИЧНА ПОМИЛКА: Не вдалося побудувати ланцюжок навіть з додатковою станцією');
+        return this.createWarningRoute(
           start,
           end,
-          vehicle,
-          batteryLevel
+          `❌ Неможливо побудувати маршрут\n\n` +
+          `Відстань: ${straightDistance.toFixed(0)} км\n` +
+          `Ваш запас ходу: ${maxRange.toFixed(0)} км\n\n` +
+          `Навіть з додатковою станцією поблизу старту (${nearest.location.address}) неможливо дістатися до пункту призначення.\n\n` +
+          `📊 Причина: Відстань між доступними зарядними станціями перевищує максимальний запас ходу вашого електромобіля.\n\n` +
+          `💡 Що робити:\n` +
+          `• Збільште рівень заряду до 100%\n` +
+          `• Виберіть авто з більшою ємністю батареї (понад 80 кВт·год)\n` +
+          `• Оберіть коротший маршрут\n` +
+          `• Перевірте наявність зарядних станцій на маршруті в інших джерелах`
         );
+      }
+      
+      console.log(`✅ Ланцюжок побудовано: ${reachableStations.length} станцій`);
+      
+      // ПРОДОВЖУЄМО побудову маршруту
+      console.log('🧬 Запуск генетичного алгоритму...');
+      
+      const initialRoute = new Route();
+      initialRoute.addPoint(start);
+      initialRoute.addPoint(end);
+
+      const optimizedRoute = this.gaService.optimize(
+        initialRoute,
+        reachableStations,
+        vehicle,
+        batteryLevel
+      );
+
+      if (this.useRoadRouting) {
+        console.log('🗺️ Розрахунок фінального маршруту по дорогах...');
+        await optimizedRoute.calculateStatsWithRouting(this.routingService);
+      } else {
+        optimizedRoute.calculateStats();
+      }
+
+      const validation = this.validateRouteStrict(optimizedRoute, vehicle, batteryLevel);
+      
+      if (!validation.isValid) {
+        console.log(`⚠️ Маршрут не пройшов валідацію: ${validation.reason}`);
         
-        if (reachableStations.length === 0) {
-          // Якщо все ще не вдалося - повідомляємо
+        // КРИТИЧНО: Якщо маршрут критично небезпечний - повертаємо попередження
+        if (validation.critical) {
           return this.createWarningRoute(
             start,
             end,
-            `Неможливо побудувати маршрут навіть з додатковою станцією поблизу старту. ` +
-            `Збільште початковий рівень заряду до 90-100%.`
+            `❌ Маршрут небезпечний\n\n${validation.reason}`
           );
         }
         
-        console.log(`✅ Маршрут побудовано з додатковою станцією поблизу старту`);
-        
-        // Продовжуємо з побудовою маршруту (не return!)
-        // Копіюємо код нижче для продовження
-        console.log('🧬 Запуск генетичного алгоритму...');
-        
-        const initialRoute = new Route();
-        initialRoute.addPoint(start);
-        initialRoute.addPoint(end);
+        optimizedRoute.warning = `⚠️ ${validation.reason}\n\n` +
+          `💡 Маршрут включає станцію поблизу старту: ${nearest.location.address || nearest.id} (${nearestDist.toFixed(1)} км)`;
+      } else {
+        console.log(`✅ Валідація пройдена. Залишковий заряд: ${validation.finalBattery.toFixed(1)}%`);
+        optimizedRoute.warning = `ℹ️ Початкового заряду недостатньо для прямого маршруту.\n\n` +
+          `✅ Маршрут автоматично побудовано через станцію поблизу:\n` +
+          `📍 ${nearest.location.address || nearest.id} (${nearestDist.toFixed(1)} км від старту)`;
+      }
 
-        const optimizedRoute = this.gaService.optimize(
-          initialRoute,
-          reachableStations,
-          vehicle,
-          batteryLevel
-        );
-
+      const lastPoint = optimizedRoute.points[optimizedRoute.points.length - 1];
+      const distanceToEnd = lastPoint.distanceTo(end);
+      
+      if (distanceToEnd > 1) {
+        console.log('⚠️ Кінцева точка відсутня, додаємо...');
+        optimizedRoute.addPoint(end);
+        
         if (this.useRoadRouting) {
-          console.log('🗺️ Розрахунок фінального маршруту по дорогах...');
           await optimizedRoute.calculateStatsWithRouting(this.routingService);
         } else {
           optimizedRoute.calculateStats();
         }
-
-        const validation = this.validateRouteStrict(optimizedRoute, vehicle, batteryLevel);
-        
-        if (!validation.isValid) {
-          console.log(`⚠️ Маршрут не пройшов валідацію: ${validation.reason}`);
-          optimizedRoute.warning = `⚠️ ${validation.reason}\n\n` +
-            `💡 Маршрут включає станцію поблизу старту: ${nearest.location.address || nearest.id} (${nearestDist.toFixed(1)} км)`;
-        } else {
-          console.log(`✅ Валідація пройдена. Залишковий заряд: ${validation.finalBattery.toFixed(1)}%`);
-          optimizedRoute.warning = `ℹ️ Початкового заряду недостатньо для прямого маршруту.\n\n` +
-            `✅ Маршрут автоматично побудовано через станцію поблизу:\n` +
-            `📍 ${nearest.location.address || nearest.id} (${nearestDist.toFixed(1)} км від старту)`;
-        }
-
-        const lastPoint = optimizedRoute.points[optimizedRoute.points.length - 1];
-        const distanceToEnd = lastPoint.distanceTo(end);
-        
-        if (distanceToEnd > 1) {
-          console.log('⚠️ Кінцева точка відсутня, додаємо...');
-          optimizedRoute.addPoint(end);
-          
-          if (this.useRoadRouting) {
-            await optimizedRoute.calculateStatsWithRouting(this.routingService);
-          } else {
-            optimizedRoute.calculateStats();
-          }
-        }
-
-        console.log(`✅ Маршрут побудовано успішно`);
-        console.log(`   - Загальна відстань: ${optimizedRoute.totalDistance.toFixed(2)} км`);
-        console.log(`   - Зупинок на зарядку: ${optimizedRoute.chargingStops.length}`);
-        
-        return optimizedRoute;
       }
+
+      console.log(`✅ Маршрут побудовано успішно`);
+      console.log(`   - Загальна відстань: ${optimizedRoute.totalDistance.toFixed(2)} км`);
+      console.log(`   - Зупинок на зарядку: ${optimizedRoute.chargingStops.length}`);
       
-      const nearestOnRoute = availableStations[0];
-      const nearestDistance = start.distanceTo(nearestOnRoute.location);
-      const requiredBattery = Math.ceil((nearestDistance / maxRange) * 100);
-      
-      console.log(`❌ Жодна станція не досяжна з поточним зарядом`);
-      
-      return this.createWarningRoute(
-        start,
-        end,
-        `Недостатньо заряду для досягнення найближчої станції на маршруті (${nearestDistance.toFixed(1)} км). ` +
-        `Збільште рівень заряду мінімум до ${requiredBattery}% або почніть подорож з іншого місця.`
-      );
+      return optimizedRoute;
     }
-
-    console.log(`✅ Перша досяжна станція: ${firstReachableStation.id} на відстані ${start.distanceTo(firstReachableStation.location).toFixed(1)} км`);
-
-    // КРОК 5: Фільтрація станцій що створюють логічний ланцюжок
-    const reachableStations = this.buildStationChain(
-      availableStations,
+    
+    const nearestOnRoute = availableStations[0];
+    const nearestDistance = start.distanceTo(nearestOnRoute.location);
+    const requiredBattery = Math.ceil((nearestDistance / maxRange) * 100);
+    
+    console.log(`❌ Жодна станція не досяжна з поточним зарядом`);
+    
+    return this.createWarningRoute(
       start,
       end,
-      vehicle,
-      batteryLevel
+      `❌ Недостатньо заряду батареї\n\n` +
+      `Відстань до найближчої станції: ${nearestDistance.toFixed(0)} км\n` +
+      `Ваш поточний запас ходу: ${vehicle.getRemainingRange(batteryLevel).toFixed(0)} км\n\n` +
+      `💡 Рекомендації:\n` +
+      `• Збільште рівень заряду мінімум до ${requiredBattery}%\n` +
+      `• Або почніть подорож з іншого місця де є зарядна станція поблизу`
     );
+  }
 
-    console.log(`✅ Побудовано ланцюжок з ${reachableStations.length} досяжних станцій`);
+  console.log(`✅ Перша досяжна станція: ${firstReachableStation.id} на відстані ${start.distanceTo(firstReachableStation.location).toFixed(1)} км`);
 
-    if (reachableStations.length === 0) {
-      return this.createWarningRoute(
-        start,
-        end,
-        'Неможливо побудувати безпечний маршрут з доступними зарядними станціями. ' +
-        'Спробуйте збільшити початковий заряд батареї або виберіть інший маршрут.'
-      );
-    }
+  // КРОК 5: Фільтрація станцій що створюють логічний ланцюжок
+  const reachableStations = this.buildStationChain(
+    availableStations,
+    start,
+    end,
+    vehicle,
+    batteryLevel
+  );
+
+  console.log(`✅ Побудовано ланцюжок з ${reachableStations.length} досяжних станцій`);
+
+  if (reachableStations.length === 0) {
+    console.log('❌ ПОМИЛКА: Не вдалося побудувати ланцюжок станцій');
+    return this.createWarningRoute(
+      start,
+      end,
+      `❌ Неможливо побудувати безпечний маршрут\n\n` +
+      `Відстань: ${straightDistance.toFixed(0)} км\n` +
+      `Максимальний запас ходу: ${vehicle.getRemainingRange(100).toFixed(0)} км після зарядки\n\n` +
+      `📊 Проблема: Зарядні станції розташовані занадто далеко одна від одної для вашого електромобіля.\n\n` +
+      `💡 Рішення:\n` +
+      `• Виберіть авто з більшою ємністю батареї (рекомендується 75+ кВт·год)\n` +
+      `• Збільште початковий заряд до 95-100%\n` +
+      `• Оберіть інший маршрут через більші міста\n` +
+      `• Зверніться до власника станцій для уточнення їх працездатності`
+    );
+  }
 
     // КРОК 6: Оптимізація з ГА
     console.log('🧬 Запуск генетичного алгоритму...');
@@ -342,7 +372,7 @@ class RoutePlannerService {
     const directDistance = start.distanceTo(end);
     
     // Оцінка необхідної кількості станцій
-    const estimatedStops = Math.ceil(directDistance / maxRangePerCharge);
+    const estimatedStops = Math.max(1, Math.ceil(directDistance / maxRangePerCharge));
     console.log(`   📊 Оцінка станцій: ${estimatedStops} (відстань ${directDistance.toFixed(0)} км)`);
     
     let iteration = 0;
@@ -382,7 +412,7 @@ class RoutePlannerService {
         
         // КРИТЕРІЙ 4: Перевірка чи станція "на лінії" маршруту
         const distanceToLine = this.distanceToRouteLine(start, end, station.location);
-        const maxDeviation = Math.min(150, directDistance * 0.25); // Макс 25% або 150км
+        const maxDeviation = Math.max(150, directDistance * 0.25); // Макс 25% або 150км
         if (distanceToLine > maxDeviation) continue;
         
         // КРИТЕРІЙ 5: Після цієї станції має бути можливість дістатись до кінця
@@ -416,6 +446,13 @@ class RoutePlannerService {
       if (!bestStation) {
         console.log(`   ❌ Не знайдено придатної станції на ітерації ${iteration}`);
         console.log(`   📍 Поточна позиція: відстань до кінця ${distToEnd.toFixed(0)} км, запас ${currentRange.toFixed(0)} км`);
+        
+        // КРИТИЧНО: Повертаємо порожній масив якщо не можемо продовжити
+        if (chain.length === 0 || distToEnd > currentRange) {
+          console.log(`   ❌ КРИТИЧНО: Маршрут неможливий - повертаємо порожній ланцюжок`);
+          return [];
+        }
+        
         break;
       }
       
@@ -441,15 +478,18 @@ class RoutePlannerService {
     // Фінальна діагностика
     if (chain.length === 0) {
       console.log(`   ❌ Не вдалося побудувати ланцюжок`);
-    } else {
-      const lastPos = chain[chain.length - 1].location;
-      const finalDist = lastPos.distanceTo(end);
-      console.log(`   📊 Побудовано ланцюжок: ${chain.length} станцій`);
-      console.log(`   📍 Залишилось до кінця: ${finalDist.toFixed(0)} км (запас ${maxRangePerCharge.toFixed(0)} км)`);
-      
-      if (finalDist > maxRangePerCharge * 0.9) {
-        console.log(`   ⚠️ ПРОБЛЕМА: Останній сегмент недосяжний!`);
-      }
+      return [];
+    }
+    
+    const lastPos = chain[chain.length - 1].location;
+    const finalDist = lastPos.distanceTo(end);
+    console.log(`   📊 Побудовано ланцюжок: ${chain.length} станцій`);
+    console.log(`   📍 Залишилось до кінця: ${finalDist.toFixed(0)} км (запас ${maxRangePerCharge.toFixed(0)} км)`);
+    
+    if (finalDist > maxRangePerCharge * 0.9) {
+      console.log(`   ⚠️ ПРОБЛЕМА: Останній сегмент недосяжний!`);
+      console.log(`   ❌ КРИТИЧНО: Повертаємо порожній ланцюжок через недосяжність кінця`);
+      return [];
     }
     
     return chain;

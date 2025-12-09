@@ -45,4 +45,106 @@ router.get('/config/data-source', (req, res) => {
   });
 });
 
+/**
+ * @route   GET /api/health/detailed
+ * @desc    Детальна перевірка здоров'я всіх сервісів
+ * @access  Public
+ */
+router.get('/health/detailed', async (req, res) => {
+  const health = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    services: {}
+  };
+
+  // Перевірка OpenChargeMap API
+  try {
+    const axios = require('axios');
+    const startTime = Date.now();
+    
+    const response = await axios.get('https://api.openchargemap.io/v3/poi', {
+      params: {
+        latitude: 50.4501,
+        longitude: 30.5234,
+        distance: 10,
+        maxresults: 1,
+        compact: true
+      },
+      timeout: 5000
+    });
+    
+    const responseTime = Date.now() - startTime;
+    
+    health.services.openChargeMap = {
+      status: response.status === 200 ? 'ok' : 'degraded',
+      responseTime: `${responseTime}ms`,
+      available: true,
+      message: `API доступний (${response.data.length || 0} станцій знайдено)`
+    };
+  } catch (error) {
+    health.services.openChargeMap = {
+      status: 'down',
+      available: false,
+      error: error.message,
+      message: 'API недоступний - використовуються тестові дані'
+    };
+    health.status = 'degraded';
+  }
+
+  // Перевірка OSRM API
+  try {
+    const axios = require('axios');
+    const startTime = Date.now();
+    
+    const response = await axios.get(
+      'https://router.project-osrm.org/route/v1/driving/30.5234,50.4501;30.6234,50.5501',
+      {
+        params: { overview: 'false' },
+        timeout: 5000
+      }
+    );
+    
+    const responseTime = Date.now() - startTime;
+    
+    health.services.osrm = {
+      status: response.data.code === 'Ok' ? 'ok' : 'degraded',
+      responseTime: `${responseTime}ms`,
+      available: true,
+      message: 'OSRM API доступний'
+    };
+  } catch (error) {
+    health.services.osrm = {
+      status: 'down',
+      available: false,
+      error: error.message,
+      message: 'OSRM API недоступний - використовуються прямі лінії'
+    };
+    health.status = 'degraded';
+  }
+
+  // Конфігурація
+  health.config = {
+    useRealChargingStations: process.env.USE_REAL_CHARGING_STATIONS !== 'false',
+    useRoadRouting: process.env.USE_ROAD_ROUTING !== 'false',
+    environment: process.env.NODE_ENV || 'development'
+  };
+
+  // Рекомендації
+  health.recommendations = [];
+  
+  if (!health.services.openChargeMap?.available) {
+    health.recommendations.push(
+      'OpenChargeMap недоступний. Встановіть USE_REAL_CHARGING_STATIONS=false в .env для використання тестових даних.'
+    );
+  }
+  
+  if (!health.services.osrm?.available) {
+    health.recommendations.push(
+      'OSRM недоступний. Встановіть USE_ROAD_ROUTING=false в .env для використання прямих ліній.'
+    );
+  }
+
+  res.json(health);
+});
+
 module.exports = router;

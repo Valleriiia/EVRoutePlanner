@@ -136,6 +136,11 @@ class Route {
       stats
     };
 
+    // НОВЕ: Додаємо warning якщо є
+    if (this.warning) {
+      result.warning = this.warning;
+    }
+
     // Додаємо геометрію якщо є
     if (this.geometry) {
       result.geometry = {

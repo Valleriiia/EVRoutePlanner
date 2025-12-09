@@ -68,14 +68,14 @@ class MapRenderer {
 
     // Початковий маркер
     const startPoint = points[0];
-    L.marker([startPoint.lat, startPoint.lon], {
+    const startMarker = L.marker([startPoint.lat, startPoint.lon], {
       icon: this.createCustomIcon('🚗', '#10b981')
     }).addTo(this.markersLayer)
       .bindPopup(`<b>Початок</b><br>${startPoint.address || 'Початкова точка'}`);
 
     // Кінцевий маркер
     const endPoint = points[points.length - 1];
-    L.marker([endPoint.lat, endPoint.lon], {
+    const endMarker = L.marker([endPoint.lat, endPoint.lon], {
       icon: this.createCustomIcon('🏁', '#ef4444')
     }).addTo(this.markersLayer)
       .bindPopup(`<b>Кінець</b><br>${endPoint.address || 'Кінцева точка'}`);
@@ -83,7 +83,7 @@ class MapRenderer {
     // Зарядні станції
     chargingStops.forEach((station, index) => {
       const loc = station.location;
-      L.marker([loc.lat, loc.lon], {
+      const stationMarker = L.marker([loc.lat, loc.lon], {
         icon: this.createCustomIcon('⚡', '#06b6d4')
       }).addTo(this.chargingStationsLayer)
         .bindPopup(`
@@ -97,8 +97,11 @@ class MapRenderer {
         `);
     });
 
-    // Автоматичне масштабування
-    this.fitRouteToView();
+    // ВИПРАВЛЕНО: Автоматичне масштабування з затримкою
+    // Даємо Leaflet час відмалювати всі шари
+    setTimeout(() => {
+      this.fitRouteToView();
+    }, 100);
 
     console.log('✅ Маршрут відображено на карті');
   }
@@ -206,13 +209,121 @@ class MapRenderer {
    */
   fitRouteToView() {
     try {
-      const bounds = this.routeLayer.getBounds();
-      if (bounds.isValid()) {
-        this.map.fitBounds(bounds, { padding: [50, 50] });
+      let bounds = null;
+      
+      // Спроба 1: Використовуємо bounds routeLayer
+      try {
+        if (this.routeLayer && this.routeLayer.getLayers().length > 0) {
+          bounds = this.routeLayer.getBounds();
+          if (bounds && bounds.isValid()) {
+            console.log('✅ Bounds з routeLayer');
+          } else {
+            bounds = null;
+          }
+        }
+      } catch (e) {
+        console.log('⚠️ routeLayer.getBounds() помилка:', e.message);
+        bounds = null;
+      }
+      
+      // Спроба 2: Використовуємо bounds markersLayer
+      if (!bounds || !bounds.isValid()) {
+        try {
+          if (this.markersLayer && this.markersLayer.getLayers().length > 0) {
+            bounds = this.markersLayer.getBounds();
+            if (bounds && bounds.isValid()) {
+              console.log('✅ Bounds з markersLayer');
+            } else {
+              bounds = null;
+            }
+          }
+        } catch (e) {
+          console.log('⚠️ markersLayer.getBounds() помилка:', e.message);
+          bounds = null;
+        }
+      }
+      
+      // Спроба 3: Використовуємо bounds chargingStationsLayer
+      if (!bounds || !bounds.isValid()) {
+        try {
+          if (this.chargingStationsLayer && this.chargingStationsLayer.getLayers().length > 0) {
+            bounds = this.chargingStationsLayer.getBounds();
+            if (bounds && bounds.isValid()) {
+              console.log('✅ Bounds з chargingStationsLayer');
+            } else {
+              bounds = null;
+            }
+          }
+        } catch (e) {
+          console.log('⚠️ chargingStationsLayer.getBounds() помилка:', e.message);
+          bounds = null;
+        }
+      }
+      
+      // Спроба 4: Створюємо вручну з усіх шарів
+      if (!bounds || !bounds.isValid()) {
+        console.log('⚠️ Всі getBounds() невалідні, створюємо вручну...');
+        bounds = this.createBoundsFromAllLayers();
+        if (bounds && bounds.isValid()) {
+          console.log('✅ Bounds створено вручну');
+        }
+      }
+      
+      // Фінальна перевірка та застосування
+      if (bounds && bounds.isValid()) {
+        this.map.fitBounds(bounds, { 
+          padding: [50, 50],
+          maxZoom: 15 // Обмежуємо максимальний zoom
+        });
+        console.log('✅ Карту масштабовано до маршруту');
+        return true;
+      } else {
+        console.warn('⚠️ Не вдалося створити валідні bounds для масштабування');
+        return false;
       }
     } catch (error) {
-      console.warn('⚠️ Не вдалося масштабувати до маршруту');
+      console.error('❌ Критична помилка масштабування:', error);
+      return false;
     }
+  }
+
+  /**
+   * НОВИЙ: Створення bounds вручну з усіх шарів
+   */
+  createBoundsFromAllLayers() {
+    const allLatLngs = [];
+    
+    // Збираємо всі координати з усіх шарів
+    this.routeLayer.eachLayer(layer => {
+      if (layer.getLatLngs) {
+        const latlngs = layer.getLatLngs();
+        if (Array.isArray(latlngs)) {
+          allLatLngs.push(...latlngs);
+        }
+      } else if (layer.getLatLng) {
+        allLatLngs.push(layer.getLatLng());
+      }
+    });
+    
+    this.markersLayer.eachLayer(layer => {
+      if (layer.getLatLng) {
+        allLatLngs.push(layer.getLatLng());
+      }
+    });
+    
+    this.chargingStationsLayer.eachLayer(layer => {
+      if (layer.getLatLng) {
+        allLatLngs.push(layer.getLatLng());
+      }
+    });
+    
+    // Створюємо bounds якщо є координати
+    if (allLatLngs.length > 0) {
+      console.log(`📍 Створено bounds з ${allLatLngs.length} точок`);
+      return L.latLngBounds(allLatLngs);
+    }
+    
+    return null;
   }
 
   /**

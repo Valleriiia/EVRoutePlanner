@@ -50,12 +50,23 @@ exports.buildRoute = async (req, res, next) => {
 
     console.log(`✅ Маршрут побудовано за ${executionTime}ms`);
 
+    // НОВЕ: Перевірка чи є попередження в маршруті
+    let responseMessage = 'Маршрут успішно побудовано';
+    let hasWarning = false;
+    
+    if (route.warning) {
+      responseMessage = route.warning;
+      hasWarning = true;
+      console.log('⚠️ Маршрут з попередженням:', route.warning);
+    }
+
     // Повернення результату
     res.json({
       success: true,
       route: route.toJSON(),
       executionTime,
-      message: route.warning || 'Маршрут успішно побудовано',
+      message: responseMessage,
+      hasWarning, // НОВЕ: Додаємо прапорець для frontend
       dataSource: process.env.USE_REAL_CHARGING_STATIONS !== 'false' ? 'OpenChargeMap' : 'Test Data'
     });
 
