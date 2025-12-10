@@ -13,7 +13,7 @@
         <header class="header">
             <div class="header__content">
                 <h1 class="header__title">
-                    <span class="header__icon">⚡</span>
+                    <span class="header__icon"><svg width="24" height="24" fill="#27d7da" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M15.425 2.25c.841 0 1.404.798 1.212 1.563l-.049.153L14.49 9.35H17c.985 0 1.532 1.054 1.1 1.854l-.1.156-7.47 10.047c-.54.725-1.621.224-1.527-.605l.785-6.91H7c-.907 0-1.487-.924-1.155-1.735l.005-.011 3.906-9.128a1.25 1.25 0 0 1 1.151-.768z"/></svg></span>
                     EV Route Planner
                 </h1>
                 <p class="header__subtitle">Оптимальні маршрути для електромобілів</p>
@@ -31,7 +31,6 @@
                         <!-- Початкова точка -->
                         <div class="form-group">
                             <label for="startPoint" class="form-label">
-                                <span class="form-label__icon">📍</span>
                                 Початкова точка
                             </label>
                             <div class="autocomplete-wrapper">
@@ -51,7 +50,6 @@
                         <!-- Кінцева точка -->
                         <div class="form-group">
                             <label for="endPoint" class="form-label">
-                                <span class="form-label__icon">🏁</span>
                                 Кінцева точка
                             </label>
                             <div class="autocomplete-wrapper">
@@ -71,7 +69,6 @@
                         <!-- Рівень заряду -->
                         <div class="form-group">
                             <label for="batteryLevel" class="form-label">
-                                <span class="form-label__icon">🔋</span>
                                 Рівень заряду батареї
                             </label>
                             <div class="battery-input">
@@ -86,15 +83,11 @@
                                 />
                                 <output id="batteryValue" class="battery-value">80%</output>
                             </div>
-                            <div class="battery-indicator">
-                                <div id="batteryBar" class="battery-indicator__bar" style="width: 80%"></div>
-                            </div>
                         </div>
 
                         <!-- Параметри авто -->
                         <div class="form-group">
                             <label class="form-label">
-                                <span class="form-label__icon">🚗</span>
                                 Параметри електромобіля
                             </label>
                             <div class="vehicle-params">
@@ -127,7 +120,6 @@
                         <!-- Кнопки -->
                         <div class="form-actions">
                             <button type="submit" id="buildRouteBtn" class="btn btn--primary">
-                                <span class="btn__icon">🗺️</span>
                                 Побудувати маршрут
                             </button>
                             <button type="button" id="resetBtn" class="btn btn--secondary">

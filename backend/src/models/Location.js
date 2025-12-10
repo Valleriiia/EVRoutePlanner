@@ -9,12 +9,8 @@ class Location {
     return `${this.address} (${this.lat}, ${this.lon})`;
   }
 
-  /**
-   * Розрахунок відстані між двома точками (формула Гаверсінуса)
-   * Використовується як швидкий fallback або для оцінок
-   */
   distanceTo(other) {
-    const R = 6371; // Радіус Землі в км
+    const R = 6371; 
     const dLat = this.toRad(other.lat - this.lat);
     const dLon = this.toRad(other.lon - this.lon);
     
@@ -26,23 +22,15 @@ class Location {
     return R * c;
   }
 
-  /**
-   * Розрахунок відстані по дорогах (через OSRM)
-   * Використовується для точних розрахунків маршруту
-   * @param {Location} other 
-   * @param {OSRMRoutingService} routingService 
-   * @returns {Promise<number>} - Відстань в км
-   */
   async roadDistanceTo(other, routingService) {
     if (!routingService) {
-      // Якщо немає routing service - використовуємо пряму відстань
       return this.distanceTo(other);
     }
 
     try {
       return await routingService.getDistance(this, other);
     } catch (error) {
-      console.warn('⚠️ Помилка OSRM, використовуємо пряму відстань');
+      console.warn('Помилка OSRM, використовуємо пряму відстань');
       return this.distanceTo(other);
     }
   }
@@ -51,9 +39,6 @@ class Location {
     return degrees * (Math.PI / 180);
   }
 
-  /**
-   * Конвертація в GeoJSON Point
-   */
   toGeoJSON() {
     return {
       type: 'Point',

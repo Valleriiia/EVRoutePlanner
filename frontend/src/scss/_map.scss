@@ -1,6 +1,5 @@
 @import 'variables';
 
-// Стилі для Leaflet маркерів
 .route-arrow {
   background: transparent !important;
   border: none !important;
@@ -12,11 +11,12 @@
   border: none !important;
 }
 
-// Переозначення стилів Leaflet popup
 .leaflet-popup-content-wrapper {
   border-radius: $radius-md;
   box-shadow: $shadow-lg;
   padding: 0;
+  background: $bg-secondary;
+  border: 1px solid rgba($white, 0.1);
 }
 
 .leaflet-popup-content {
@@ -26,7 +26,7 @@
   .station-popup {
     h4 {
       margin: 0 0 $spacing-sm 0;
-      color: $gray-800;
+      color: $gray-100;
       font-size: $font-size-base;
       font-weight: 600;
       padding-bottom: $spacing-sm;
@@ -36,11 +36,11 @@
     p {
       margin: $spacing-xs 0;
       font-size: $font-size-sm;
-      color: $gray-600;
+      color: $gray-300;
       line-height: 1.6;
       
       strong {
-        color: $gray-800;
+        color: $gray-100;
         font-weight: 600;
       }
     }
@@ -53,10 +53,9 @@
 }
 
 .leaflet-popup-tip {
-  background: white;
+  background: $bg-secondary;
 }
 
-// Анімація для маркерів
 @keyframes marker-bounce {
   0%, 100% {
     transform: translateY(0);
@@ -74,27 +73,32 @@
   }
 }
 
-// Стилі для контролів карти
 .leaflet-control-zoom {
   border: none !important;
   box-shadow: $shadow-md;
   
   a {
     border: none !important;
-    background: $white !important;
-    color: $gray-800 !important;
+    background: $bg-secondary !important;
+    color: $text-primary !important;
     transition: all $transition-fast;
     
     &:hover {
       background: $primary-color !important;
       color: $white !important;
+      box-shadow: $shadow-glow-sm;
     }
   }
 }
 
+.leaflet-top.leaflet-left {
+  display: none;
+}
+
 .leaflet-control-attribution {
-  background: rgba($white, 0.8) !important;
-  backdrop-filter: blur(4px);
+  background: rgba($bg-primary, 0.9) !important;
+  backdrop-filter: blur(8px);
   font-size: $font-size-xs;
   padding: $spacing-xs $spacing-sm !important;
+  color: $text-secondary !important;
 }

@@ -1,8 +1,5 @@
 const Joi = require('joi');
 
-/**
- * Схема валідації для запиту побудови маршруту
- */
 const routeRequestSchema = Joi.object({
   startPoint: Joi.object({
     lat: Joi.number().min(-90).max(90).required(),
@@ -24,9 +21,6 @@ const routeRequestSchema = Joi.object({
   }).optional()
 });
 
-/**
- * Middleware для валідації запиту побудови маршруту
- */
 exports.validateRouteRequest = (req, res, next) => {
   const { error, value } = routeRequestSchema.validate(req.body, {
     abortEarly: false,
@@ -46,22 +40,15 @@ exports.validateRouteRequest = (req, res, next) => {
     });
   }
 
-  // Замінюємо req.body на валідовані дані
   req.body = value;
   next();
 };
 
-/**
- * Схема валідації для координат
- */
 const coordinatesSchema = Joi.object({
   lat: Joi.number().min(-90).max(90).required(),
   lon: Joi.number().min(-180).max(180).required()
 });
 
-/**
- * Middleware для валідації координат
- */
 exports.validateCoordinates = (req, res, next) => {
   const { lat, lon } = req.query;
   

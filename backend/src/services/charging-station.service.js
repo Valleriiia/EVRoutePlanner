@@ -9,13 +9,10 @@ class ChargingStationService {
     this.testStations = this.initializeTestStations();
   }
 
-  /**
-   * Отримання всіх доступних станцій поблизу точки
-   */
   async getStationsNearby(location, radiusKm = 100) {
     if (this.useRealData) {
       try {
-        console.log('🌐 Запит реальних станцій з OpenChargeMap...');
+        console.log('Запит реальних станцій з OpenChargeMap...');
         const realStations = await this.openChargeMap.getStationsNearby(
           location.lat,
           location.lon,
@@ -24,30 +21,25 @@ class ChargingStationService {
         );
         
         if (realStations && realStations.length > 0) {
-          // Видаляємо дублікати (станції в межах 2 км одна від одної)
           return this.removeDuplicates(realStations, 2);
         }
         
-        console.log('⚠️ Реальних станцій не знайдено, використовуємо тестові');
+        console.log('Реальних станцій не знайдено, використовуємо тестові');
       } catch (error) {
-        console.error('❌ Помилка отримання реальних станцій:', error.message);
+        console.error('Помилка отримання реальних станцій:', error.message);
       }
     }
 
-    // Fallback до тестових даних
     return this.testStations.filter(station => {
       const distance = location.distanceTo(station.location);
       return distance <= radiusKm;
     });
   }
 
-  /**
-   * Отримання станцій вздовж маршруту
-   */
   async getStationsAlongRoute(start, end, corridorWidth = 50) {
     if (this.useRealData) {
       try {
-        console.log('🌐 Запит станцій вздовж маршруту...');
+        console.log('Запит станцій вздовж маршруту...');
         const realStations = await this.openChargeMap.getStationsAlongRoute(
           start,
           end,
@@ -55,18 +47,16 @@ class ChargingStationService {
         );
         
         if (realStations && realStations.length > 0) {
-          // Видаляємо дублікати та сортуємо по відстані від початку
           const filtered = this.removeDuplicates(realStations, 5);
           return this.sortByDistanceFromStart(filtered, start);
         }
         
-        console.log('⚠️ Станцій на маршруті не знайдено, використовуємо тестові');
+        console.log('Станцій на маршруті не знайдено, використовуємо тестові');
       } catch (error) {
-        console.error('❌ Помилка:', error.message);
+        console.error('Помилка:', error.message);
       }
     }
 
-    // Fallback - фільтруємо тестові станції
     const filtered = this.testStations.filter(station => {
       const toStation = start.distanceTo(station.location);
       const fromStation = station.location.distanceTo(end);
@@ -78,21 +68,15 @@ class ChargingStationService {
     return this.sortByDistanceFromStart(filtered, start);
   }
 
-  /**
-   * Видалення дублікатів (станцій що надто близько)
-   * Тепер з вибором найкращої станції
-   */
   removeDuplicates(stations, minDistanceKm = 5) {
     const result = [];
     const processed = new Set();
     
-    // Сортуємо по потужності (спочатку найпотужніші)
     const sorted = [...stations].sort((a, b) => b.powerKw - a.powerKw);
     
     for (const station of sorted) {
       if (processed.has(station.id)) continue;
       
-      // Перевіряємо чи є вже дуже близька станція
       const hasDuplicate = result.some(existing => {
         const distance = existing.location.distanceTo(station.location);
         return distance < minDistanceKm;
@@ -103,21 +87,17 @@ class ChargingStationService {
         processed.add(station.id);
       } else {
         processed.add(station.id);
-        // Тихо пропускаємо без логування (було забагато виводу)
       }
     }
     
     const removedCount = stations.length - result.length;
     if (removedCount > 0) {
-      console.log(`   🔍 Видалено дублікатів: ${removedCount} (залишено найпотужніші)`);
+      console.log(`   Видалено дублікатів: ${removedCount} (залишено найпотужніші)`);
     }
     
     return result;
   }
 
-  /**
-   * Сортування станцій по відстані від початкової точки
-   */
   sortByDistanceFromStart(stations, start) {
     return stations.sort((a, b) => {
       const distA = start.distanceTo(a.location);
@@ -126,9 +106,6 @@ class ChargingStationService {
     });
   }
 
-  /**
-   * Отримання станції за ID
-   */
   async getStationById(id) {
     const testStation = this.testStations.find(s => s.id === id);
     if (testStation) return testStation;
@@ -140,34 +117,27 @@ class ChargingStationService {
     return null;
   }
 
-  /**
- * НОВИЙ: Отримання станцій поблизу точки (для низького заряду)
- * @param {Location} location - Точка
- * @param {number} radiusKm - Радіус в км
- * @returns {Promise<Array>} - Масив станцій
- */
 async getStationsNearby(location, radiusKm = 50) {
   if (this.useRealData) {
     try {
-      console.log(`🔍 Пошук станцій поблизу (${radiusKm} км)...`);
+      console.log(`Пошук станцій поблизу (${radiusKm} км)...`);
       const realStations = await this.openChargeMap.getStationsNearby(
         location.lat,
         location.lon,
         radiusKm,
-        20 // Макс 20 найближчих
+        20 
       );
       
       if (realStations && realStations.length > 0) {
         return this.sortByDistanceFromStart(realStations, location);
       }
       
-      console.log('⚠️ Реальних станцій не знайдено, використовуємо тестові');
+      console.log('Реальних станцій не знайдено, використовуємо тестові');
     } catch (error) {
-      console.error('❌ Помилка:', error.message);
+      console.error('Помилка:', error.message);
     }
   }
 
-  // Fallback до тестових даних
   const nearby = this.testStations.filter(station => {
     const distance = location.distanceTo(station.location);
     return distance <= radiusKm;
@@ -176,73 +146,52 @@ async getStationsNearby(location, radiusKm = 50) {
   return this.sortByDistanceFromStart(nearby, location);
 }
 
-  /**
-   * Отримання всіх станцій (для відображення на карті)
-   */
   async getAllStations() {
     return this.testStations;
   }
 
-  /**
-   * Ініціалізація тестових станцій
-   * Оптимізовано для реалістичних відстаней між станціями
-   */
   initializeTestStations() {
     return [
-      // КИЇВ (початок)
       new ChargingStation('TEST-001', new Location(50.4501, 30.5234, 'Київ, центр'), 150, 'available'),
       new ChargingStation('TEST-002', new Location(50.4021, 30.3926, 'Київ, Теремки'), 100, 'available'),
       
-      // Маршрут Київ → Львів (через Житомир)
       new ChargingStation('TEST-003', new Location(50.3800, 30.0950, 'Васильків (40 км)'), 100, 'available'),
       new ChargingStation('TEST-004', new Location(50.2547, 28.6587, 'Житомир (140 км)'), 150, 'available'),
       new ChargingStation('TEST-005', new Location(50.0650, 27.6831, 'Новоград-Волинський (220 км)'), 100, 'available'),
       new ChargingStation('TEST-006', new Location(50.2297, 26.2510, 'Рівне (320 км)'), 150, 'available'),
       new ChargingStation('TEST-007', new Location(49.8419, 24.0316, 'Львів (467 км)'), 150, 'available'),
       
-      // Альтернативний маршрут Київ → Львів (через Вінницю)
       new ChargingStation('TEST-008', new Location(49.8397, 30.1090, 'Біла Церква (80 км)'), 100, 'available'),
       new ChargingStation('TEST-009', new Location(49.2328, 28.4810, 'Вінниця (260 км)'), 150, 'available'),
       new ChargingStation('TEST-010', new Location(49.4216, 26.9971, 'Хмельницький (380 км)'), 100, 'available'),
       new ChargingStation('TEST-011', new Location(49.5535, 25.5948, 'Тернопіль (420 км)'), 100, 'available'),
       
-      // Маршрут Київ → Одеса
       new ChargingStation('TEST-012', new Location(48.6900, 31.8900, 'Умань (200 км)'), 100, 'available'),
       new ChargingStation('TEST-013', new Location(47.9103, 33.3917, 'Кропивницький (300 км)'), 100, 'available'),
       new ChargingStation('TEST-014', new Location(46.9659, 32.0000, 'Миколаїв (480 км)'), 100, 'available'),
       new ChargingStation('TEST-015', new Location(46.4825, 30.7233, 'Одеса (475 км)'), 150, 'available'),
       
-      // Маршрут Київ → Харків
       new ChargingStation('TEST-016', new Location(50.7472, 32.6686, 'Прилуки (150 км)'), 75, 'available'),
       new ChargingStation('TEST-017', new Location(50.2500, 34.4900, 'Лубни (220 км)'), 75, 'available'),
       new ChargingStation('TEST-018', new Location(49.9935, 36.2304, 'Харків (480 км)'), 150, 'available'),
       
-      // Маршрут Київ → Дніпро
       new ChargingStation('TEST-019', new Location(49.5883, 34.5514, 'Полтава (340 км)'), 100, 'available'),
       new ChargingStation('TEST-020', new Location(48.4647, 35.0462, 'Дніпро (480 км)'), 150, 'available'),
       
-      // Західна Україна
       new ChargingStation('TEST-021', new Location(48.9226, 24.7111, 'Івано-Франківськ'), 100, 'available'),
       new ChargingStation('TEST-022', new Location(48.6208, 22.2879, 'Ужгород'), 75, 'available'),
       new ChargingStation('TEST-023', new Location(48.0100, 24.1350, 'Коломия'), 50, 'available'),
       
-      // Північна Україна
       new ChargingStation('TEST-024', new Location(51.4982, 31.2893, 'Чернігів'), 75, 'available'),
       new ChargingStation('TEST-025', new Location(50.9077, 34.7981, 'Суми'), 75, 'available'),
     ];
   }
 
-  /**
-   * Перемикання режиму
-   */
   setUseRealData(useReal) {
     this.useRealData = useReal;
     console.log(`🔄 Режим станцій: ${useReal ? 'РЕАЛЬНІ' : 'ТЕСТОВІ'}`);
   }
 
-  /**
-   * Очищення кешу
-   */
   clearCache() {
     this.openChargeMap.clearCache();
   }

@@ -57,7 +57,6 @@ router.get('/health/detailed', async (req, res) => {
     services: {}
   };
 
-  // Перевірка OpenChargeMap API
   try {
     const axios = require('axios');
     const startTime = Date.now();
@@ -91,7 +90,6 @@ router.get('/health/detailed', async (req, res) => {
     health.status = 'degraded';
   }
 
-  // Перевірка OSRM API
   try {
     const axios = require('axios');
     const startTime = Date.now();
@@ -122,14 +120,12 @@ router.get('/health/detailed', async (req, res) => {
     health.status = 'degraded';
   }
 
-  // Конфігурація
   health.config = {
     useRealChargingStations: process.env.USE_REAL_CHARGING_STATIONS !== 'false',
     useRoadRouting: process.env.USE_ROAD_ROUTING !== 'false',
     environment: process.env.NODE_ENV || 'development'
   };
 
-  // Рекомендації
   health.recommendations = [];
   
   if (!health.services.openChargeMap?.available) {

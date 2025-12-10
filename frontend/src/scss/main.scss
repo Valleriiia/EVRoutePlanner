@@ -1,7 +1,6 @@
 @import "variables";
 @import "map";
 
-// Reset & Base
 * {
     margin: 0;
     padding: 0;
@@ -17,25 +16,25 @@ body {
     font-family: $font-family;
     font-size: $font-size-base;
     line-height: 1.5;
-    color: $gray-900;
-    background-color: $gray-50;
+    color: $text-primary;
+    background: $gradient-bg;
+    background-attachment: fixed;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
 
-// Container
 .container {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
 }
 
-// Header
 .header {
-    background: linear-gradient(135deg, $primary-color 0%, #1e40af 100%);
+    background: $gradient-primary;
     color: $white;
     padding: $spacing-lg $spacing-xl;
     box-shadow: $shadow-md;
+    border-bottom: 1px solid rgba($white, 0.1);
 
     &__content {
         max-width: 1400px;
@@ -52,20 +51,24 @@ body {
     }
 
     &__icon {
-        font-size: 2rem;
         animation: pulse 2s infinite;
+        filter: drop-shadow(0 0 8px rgba($white, 0.5));
+
+        svg {
+            width: 30px;
+            height: 30px;
+        }
     }
 
     &__subtitle {
         font-size: $font-size-lg;
-        opacity: 0.9;
+        opacity: 0.95;
         font-weight: 300;
     }
 }
 
 @keyframes pulse {
-    0%,
-    100% {
+    0%, 100% {
         transform: scale(1);
     }
     50% {
@@ -73,7 +76,6 @@ body {
     }
 }
 
-// Main Layout
 .main {
     display: flex;
     flex: 1;
@@ -82,13 +84,14 @@ body {
     margin: 0 auto;
     gap: $spacing-lg;
     padding: $spacing-lg;
+    align-items: flex-start;
 
     @media (max-width: $breakpoint-lg) {
         flex-direction: column;
+        align-items: normal;
     }
 }
 
-// Sidebar
 .sidebar {
     width: 400px;
     flex-shrink: 0;
@@ -99,23 +102,27 @@ body {
 }
 
 .input-panel {
-    background: $white;
+    background: $gradient-panel;
     border-radius: $radius-xl;
     padding: $spacing-xl;
     box-shadow: $shadow-lg;
     height: fit-content;
     position: sticky;
     top: $spacing-lg;
+    border: 1px solid rgba($white, 0.1);
 
     &__title {
         font-size: $font-size-2xl;
         font-weight: 600;
         margin-bottom: $spacing-lg;
         color: $gray-800;
+        background: linear-gradient(135deg, #60a5fa, #06b6d4);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
 }
 
-// Form
 .route-form {
     display: flex;
     flex-direction: column;
@@ -131,14 +138,10 @@ body {
 .form-label {
     font-size: $font-size-sm;
     font-weight: 600;
-    color: $gray-700;
+    color: $gray-600;
     display: flex;
     align-items: center;
     gap: $spacing-sm;
-
-    &__icon {
-        font-size: $font-size-lg;
-    }
 }
 
 .form-input {
@@ -148,11 +151,15 @@ body {
     font-size: $font-size-base;
     transition: all $transition-fast;
     font-family: $font-family;
+    background: $bg-primary;
+    color: $text-primary;
+    width: 100%;
 
     &:focus {
         outline: none;
         border-color: $primary-color;
-        box-shadow: 0 0 0 3px rgba($primary-color, 0.1);
+        box-shadow: 0 0 0 3px rgba($primary-color, 0.2);
+        background: $bg-secondary;
     }
 
     &--small {
@@ -161,16 +168,15 @@ body {
     }
 
     &::placeholder {
-        color: $gray-400;
+        color: $text-muted;
     }
 }
 
 .form-hint {
     font-size: $font-size-xs;
-    color: $gray-500;
+    color: $text-secondary;
 }
 
-// Autocomplete
 .autocomplete-wrapper {
     position: relative;
 }
@@ -180,7 +186,7 @@ body {
     top: 100%;
     left: 0;
     right: 0;
-    background: $white;
+    background: $bg-secondary;
     border: 2px solid $gray-200;
     border-top: none;
     border-radius: 0 0 $radius-md $radius-md;
@@ -195,7 +201,7 @@ body {
     padding: $spacing-md;
     cursor: pointer;
     transition: background $transition-fast;
-    border-bottom: 1px solid $gray-100;
+    border-bottom: 1px solid $gray-200;
 
     &:last-child {
         border-bottom: none;
@@ -203,54 +209,42 @@ body {
 
     &:hover,
     &.active {
-        background: $gray-50;
+        background: $gray-200;
     }
 
     &__main {
         font-weight: 600;
-        color: $gray-900;
+        color: $text-primary;
         margin-bottom: $spacing-xs;
         display: flex;
         align-items: center;
         gap: $spacing-sm;
     }
 
-    &__icon {
-        color: $primary-color;
-        font-size: $font-size-lg;
-    }
-
     &__details {
         font-size: $font-size-sm;
-        color: $gray-600;
+        color: $text-secondary;
     }
 
     &__type {
         display: inline-block;
         padding: 2px $spacing-sm;
-        background: $gray-200;
+        background: $gray-300;
         border-radius: $radius-sm;
         font-size: $font-size-xs;
-        color: $gray-700;
+        color: $gray-600;
         margin-left: $spacing-sm;
     }
 }
 
-.suggestions-loading {
-    padding: $spacing-lg;
-    text-align: center;
-    color: $gray-500;
-    font-size: $font-size-sm;
-}
-
+.suggestions-loading,
 .suggestions-empty {
     padding: $spacing-lg;
     text-align: center;
-    color: $gray-500;
+    color: $text-secondary;
     font-size: $font-size-sm;
 }
 
-// Battery Input
 .battery-input {
     display: flex;
     align-items: center;
@@ -271,12 +265,14 @@ body {
         width: 20px;
         height: 20px;
         border-radius: $radius-full;
-        background: $primary-color;
+        background: linear-gradient(135deg, $primary-color, $info-color);
         cursor: pointer;
         transition: transform $transition-fast;
+        box-shadow: $shadow-glow-sm;
 
         &:hover {
             transform: scale(1.2);
+            box-shadow: $shadow-glow-md;
         }
     }
 
@@ -284,9 +280,10 @@ body {
         width: 20px;
         height: 20px;
         border-radius: $radius-full;
-        background: $primary-color;
+        background: linear-gradient(135deg, $primary-color, $info-color);
         cursor: pointer;
         border: none;
+        box-shadow: $shadow-glow-sm;
     }
 }
 
@@ -298,25 +295,6 @@ body {
     text-align: right;
 }
 
-.battery-indicator {
-    height: 30px;
-    background: $gray-100;
-    border-radius: $radius-md;
-    overflow: hidden;
-    border: 2px solid $gray-200;
-
-    &__bar {
-        height: 100%;
-        background: linear-gradient(90deg, $success-color, #34d399);
-        transition: width $transition-base;
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        padding-right: $spacing-sm;
-    }
-}
-
-// Vehicle Params
 .vehicle-params {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -329,13 +307,12 @@ body {
 
         label {
             font-size: $font-size-xs;
-            color: $gray-600;
+            color: $text-secondary;
             font-weight: 500;
         }
     }
 }
 
-// Buttons
 .form-actions {
     display: flex;
     gap: $spacing-md;
@@ -362,14 +339,15 @@ body {
     }
 
     &--primary {
-        background: $primary-color;
+        background: linear-gradient(135deg, $primary-color, $info-color);
         color: $white;
         flex: 1;
+        box-shadow: $shadow-glow-sm;
 
         &:hover:not(:disabled) {
-            background: $primary-hover;
+            background: linear-gradient(135deg, $primary-hover, #0891b2);
             transform: translateY(-2px);
-            box-shadow: $shadow-md;
+            box-shadow: $shadow-md, $shadow-glow-md;
         }
 
         &:active:not(:disabled) {
@@ -379,97 +357,108 @@ body {
 
     &--secondary {
         background: $gray-200;
-        color: $gray-700;
+        color: $gray-600;
+        border: 1px solid $gray-300;
 
         &:hover:not(:disabled) {
             background: $gray-300;
+            border-color: $gray-400;
         }
-    }
-
-    &__icon {
-        font-size: $font-size-lg;
     }
 }
 
-// Status Message
 .status-message {
     margin-top: $spacing-lg;
     padding: $spacing-md;
     border-radius: $radius-md;
     font-size: $font-size-sm;
+    border: 1px solid transparent;
 
     &--loading {
-        background: $info-color;
-        color: $white;
+        background: rgba($info-color, 0.2);
+        color: #67e8f9;
+        border-color: $info-color;
     }
 
     &--error {
-        background: $error-color;
-        color: $white;
+        background: rgba($error-color, 0.2);
+        color: #fca5a5;
+        border-color: $error-color;
     }
 
     &--success {
-        background: $success-color;
-        color: $white;
+        background: rgba($success-color, 0.2);
+        color: #6ee7b7;
+        border-color: $success-color;
     }
 
     &--warning {
-        background: #f59e0b;
-        color: #ffffff;
-        border-left: 4px solid #d97706;
+        background: rgba($warning-color, 0.2);
+        color: #fbbf24;
+        border-left: 4px solid $warning-color;
     }
 }
 
 .route-warning {
-    background: #fef3c7;
-    border: 2px solid #f59e0b;
-    border-radius: 0.75rem;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
+    background: rgba($warning-color, 0.15);
+    border: 2px solid $warning-color;
+    border-radius: $radius-lg;
+    padding: $spacing-lg;
+    margin-bottom: $spacing-lg;
 
     &__title {
-        color: #92400e;
-        font-size: 1.125rem;
+        color: #fbbf24;
+        font-size: $font-size-lg;
         font-weight: 600;
-        margin-bottom: 0.75rem;
+        margin-bottom: $spacing-sm + $spacing-xs;
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-    }
-
-    &__icon {
-        font-size: 1.5rem;
+        gap: $spacing-sm;
     }
 
     &__message {
-        color: #78350f;
-        font-size: 0.875rem;
+        color: #fde68a;
+        font-size: $font-size-sm;
         line-height: 1.6;
         white-space: pre-line;
     }
 
     &__recommendations {
-        margin-top: 1rem;
-        padding-top: 1rem;
-        border-top: 1px solid #fbbf24;
+        margin-top: $spacing-md;
+        padding-top: $spacing-md;
+        border-top: 1px solid rgba(#fbbf24, 0.3);
 
         &-title {
-            color: #92400e;
-            font-size: 0.875rem;
+            color: #fbbf24;
+            font-size: $font-size-sm;
             font-weight: 600;
-            margin-bottom: 0.5rem;
+            margin-bottom: $spacing-sm;
         }
 
         &-list {
-            color: #78350f;
-            font-size: 0.875rem;
-            margin-left: 1.25rem;
+            color: #fde68a;
+            font-size: $font-size-sm;
+            margin-left: $spacing-md + $spacing-xs;
             line-height: 1.6;
         }
     }
 }
 
-// Route Info
+.route-notification {
+    background: rgba($info-color, 0.15);
+    border: 2px solid $info-color;
+    border-radius: $radius-lg;
+    padding: $spacing-lg;
+    margin-bottom: $spacing-lg;
+
+    &__message {
+        color: #17c8e7;
+        font-size: $font-size-sm;
+        line-height: 1.6;
+        white-space: pre-line;
+    }
+}
+
 .route-info {
     margin-top: $spacing-xl;
     padding-top: $spacing-xl;
@@ -494,24 +483,24 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: $spacing-md;
-    background: $gray-50;
+    background: rgba($bg-secondary, 0.5);
     border-radius: $radius-md;
     border-left: 4px solid $primary-color;
+    backdrop-filter: blur(10px);
 
     &__label {
         font-size: $font-size-sm;
-        color: $gray-600;
+        color: $text-secondary;
         font-weight: 500;
     }
 
     &__value {
         font-size: $font-size-lg;
-        color: $gray-900;
+        color: $text-primary;
         font-weight: 700;
     }
 }
 
-// Stations List
 .stations-list {
     margin-top: $spacing-lg;
 
@@ -519,67 +508,69 @@ body {
         font-size: $font-size-base;
         font-weight: 600;
         margin-bottom: $spacing-md;
-        color: $gray-700;
+        color: $gray-600;
     }
 }
 
 .station-item {
     padding: $spacing-md;
-    background: $gray-50;
+    background: rgba($bg-secondary, 0.5);
     border-radius: $radius-md;
     margin-bottom: $spacing-sm;
     border: 1px solid $gray-200;
+    backdrop-filter: blur(10px);
 
     &__name {
         font-weight: 600;
-        color: $gray-800;
+        color: $text-primary;
         margin-bottom: $spacing-xs;
     }
 
     &__details {
         font-size: $font-size-sm;
-        color: $gray-600;
+        color: $text-secondary;
     }
 }
 
 .stations-error {
-    background: #fee2e2;
-    border: 1px solid #fca5a5;
-    border-radius: 0.5rem;
-    padding: 1rem;
+    background: rgba($error-color, 0.15);
+    border: 1px solid $error-color;
+    border-radius: $radius-md;
+    padding: $spacing-md;
     text-align: center;
-    color: #991b1b;
-    font-size: 0.875rem;
+    color: #fca5a5;
+    font-size: $font-size-sm;
 }
 
 .stations-success {
-    background: #d1fae5;
-    border: 1px solid #6ee7b7;
-    border-radius: 0.5rem;
-    padding: 1rem;
+    background: rgba($success-color, 0.15);
+    border: 1px solid $success-color;
+    border-radius: $radius-md;
+    padding: $spacing-md;
     text-align: center;
-    color: #065f46;
-    font-size: 0.875rem;
+    color: #6ee7b7;
+    font-size: $font-size-sm;
     font-weight: 500;
 }
 
-// Map Container
 .map-container {
     flex: 1;
-    position: relative;
+    position: sticky;
+    top: 24px;
     border-radius: $radius-xl;
     overflow: hidden;
     box-shadow: $shadow-lg;
-    min-height: 600px;
+    min-height: 680px;
+    border: 1px solid rgba($white, 0.1);
 }
 
 .map {
     width: 100%;
     height: 100%;
-    min-height: 600px;
+    min-height: 680px;
+    filter: brightness(0.9) contrast(1.1);
 }
 
-// Стилі для маркерів маршруту
 .route-arrow {
     background: transparent !important;
     border: none !important;
@@ -590,20 +581,19 @@ body {
     border: none;
 }
 
-// Стилі для popup станцій
 .station-popup {
     font-family: $font-family;
 
     h4 {
         margin: 0 0 $spacing-sm 0;
-        color: $gray-800;
+        color: $gray-100;
         font-size: $font-size-base;
     }
 
     p {
         margin: $spacing-xs 0;
         font-size: $font-size-sm;
-        color: $gray-600;
+        color: $gray-300;
     }
 }
 
@@ -620,7 +610,7 @@ body {
 .map-control {
     width: 40px;
     height: 40px;
-    background: $white;
+    background: $bg-secondary;
     border: 2px solid $gray-200;
     border-radius: $radius-md;
     font-size: $font-size-xl;
@@ -631,34 +621,36 @@ body {
     align-items: center;
     justify-content: center;
     box-shadow: $shadow-md;
+    color: $gray-600;
 
     &:hover {
-        background: $primary-color;
+        background: linear-gradient(135deg, $primary-color, $info-color);
         color: $white;
-        border-color: $primary-color;
+        border-color: transparent;
         transform: scale(1.05);
+        box-shadow: $shadow-glow-md;
     }
 }
 
-// Map Loader
 .map-loader {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba($white, 0.95);
+    background: rgba($bg-primary, 0.95);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     z-index: $z-modal;
     gap: $spacing-lg;
+    backdrop-filter: blur(10px);
 
     p {
         font-size: $font-size-lg;
         font-weight: 600;
-        color: $gray-700;
+        color: $gray-600;
     }
 }
 
@@ -669,6 +661,7 @@ body {
     border-top-color: $primary-color;
     border-radius: $radius-full;
     animation: spin 1s linear infinite;
+    box-shadow: $shadow-glow-sm;
 }
 
 @keyframes spin {
@@ -677,16 +670,34 @@ body {
     }
 }
 
-// Footer
 .footer {
-    background: $gray-800;
-    color: $white;
+    background: $gradient-bg;
+    color: $text-secondary;
     text-align: center;
     padding: $spacing-lg;
     margin-top: auto;
+    border-top: 1px solid rgba($white, 0.1);
 
     p {
         font-size: $font-size-sm;
         opacity: 0.9;
+    }
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: $bg-primary;
+}
+
+::-webkit-scrollbar-thumb {
+    background: $gray-200;
+    border-radius: 5px;
+
+    &:hover {
+        background: $gray-300;
     }
 }

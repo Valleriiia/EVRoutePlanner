@@ -5,8 +5,8 @@ class Route {
     this.totalDistance = 0;
     this.totalTime = 0;
     this.totalChargingTime = 0;
-    this.geometry = null; // GeoJSON геометрія маршруту
-    this.segments = []; // Сегменти маршруту з деталями
+    this.geometry = null;
+    this.segments = [];
   }
 
   addPoint(location) {
@@ -17,9 +17,6 @@ class Route {
     this.chargingStops.push(station);
   }
 
-  /**
-   * Розрахунок статистики маршруту (проста версія, без OSRM)
-   */
   calculateStats() {
     this.totalDistance = 0;
     
@@ -27,7 +24,6 @@ class Route {
       this.totalDistance += this.points[i].distanceTo(this.points[i + 1]);
     }
 
-    // Припускаємо середню швидкість 80 км/год
     this.totalTime = this.totalDistance / 80;
     
     return {
@@ -39,33 +35,27 @@ class Route {
     };
   }
 
-  /**
-   * Розрахунок статистики з використанням OSRM
-   * @param {OSRMRoutingService} routingService 
-   */
   async calculateStatsWithRouting(routingService) {
     if (!routingService || this.points.length < 2) {
       return this.calculateStats();
     }
 
     try {
-      console.log('🗺️ Розрахунок маршруту через OSRM...');
+      console.log('Розрахунок маршруту через OSRM...');
 
-      // Отримуємо маршрут по дорогах
       const routeData = await routingService.getRoute(
         this.points[0],
         this.points[this.points.length - 1],
-        this.points.slice(1, -1) // Проміжні точки (станції)
+        this.points.slice(1, -1)
       );
 
       this.totalDistance = routeData.distance;
       this.totalTime = routeData.duration;
-      this.geometry = routeData.geometry; // Зберігаємо геометрію для карти
+      this.geometry = routeData.geometry;
 
-      // Розраховуємо сегменти між точками
       await this.calculateSegments(routingService);
 
-      console.log(`✅ Маршрут розраховано: ${this.totalDistance.toFixed(2)} км`);
+      console.log(`Маршрут розраховано: ${this.totalDistance.toFixed(2)} км`);
 
       return {
         distance: this.totalDistance,
@@ -77,14 +67,11 @@ class Route {
       };
 
     } catch (error) {
-      console.warn('⚠️ Помилка OSRM, використовуємо прямі лінії');
+      console.warn('Помилка OSRM, використовуємо прямі лінії');
       return this.calculateStats();
     }
   }
 
-  /**
-   * Розрахунок окремих сегментів маршруту
-   */
   async calculateSegments(routingService) {
     this.segments = [];
 
@@ -103,7 +90,6 @@ class Route {
           geometry: segmentData.geometry
         });
       } catch (error) {
-        // Fallback для сегмента
         const straightDistance = this.points[i].distanceTo(this.points[i + 1]);
         this.segments.push({
           from: this.points[i],
@@ -118,9 +104,6 @@ class Route {
     }
   }
 
-  /**
-   * Експорт у JSON з підтримкою геометрії
-   */
   toJSON() {
     const stats = {
       distance: this.totalDistance,
@@ -136,12 +119,10 @@ class Route {
       stats
     };
 
-    // НОВЕ: Додаємо warning якщо є
     if (this.warning) {
       result.warning = this.warning;
     }
 
-    // Додаємо геометрію якщо є
     if (this.geometry) {
       result.geometry = {
         type: 'LineString',
@@ -149,7 +130,6 @@ class Route {
       };
     }
 
-    // Додаємо сегменти якщо є
     if (this.segments.length > 0) {
       result.segments = this.segments.map(seg => ({
         from: { lat: seg.from.lat, lon: seg.from.lon, address: seg.from.address },
@@ -163,9 +143,6 @@ class Route {
     return result;
   }
 
-  /**
-   * Експорт геометрії у GeoJSON для Leaflet
-   */
   toGeoJSON() {
     if (this.geometry) {
       return {
@@ -182,7 +159,6 @@ class Route {
       };
     }
 
-    // Fallback: пряма лінія
     return {
       type: 'Feature',
       geometry: {

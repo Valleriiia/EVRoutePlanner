@@ -2,36 +2,24 @@ const axios = require('axios');
 const ChargingStation = require('../models/ChargingStation');
 const Location = require('../models/Location');
 
-/**
- * Сервіс для роботи з OpenChargeMap API
- * Документація: https://openchargemap.org/site/develop/api
- */
 class OpenChargeMapService {
   constructor() {
     this.baseURL = 'https://api.openchargemap.io/v3/poi';
-    this.apiKey = process.env.OPENCHARGE_API_KEY || null; // API key опціональний
-    this.cache = new Map(); // Кеш для запитів
-    this.cacheExpiry = 3600000; // 1 година
+    this.apiKey = process.env.OPENCHARGE_API_KEY || null;
+    this.cache = new Map();
+    this.cacheExpiry = 3600000;
   }
 
-  /**
-   * Отримання зарядних станцій в радіусі
-   * @param {number} latitude - Широта
-   * @param {number} longitude - Довгота
-   * @param {number} distance - Радіус в км (max 500)
-   * @param {number} maxResults - Максимальна кількість результатів
-   */
   async getStationsNearby(latitude, longitude, distance = 50, maxResults = 50) {
     try {
-      // Перевірка кешу
       const cacheKey = `${latitude},${longitude},${distance}`;
       const cached = this.getFromCache(cacheKey);
       if (cached) {
-        console.log('📦 Використання кешованих даних');
+        console.log('Використання кешованих даних');
         return cached;
       }
 
-      console.log(`🔍 Пошук станцій: lat=${latitude}, lon=${longitude}, radius=${distance}km`);
+      console.log(`Пошук станцій: lat=${latitude}, lon=${longitude}, radius=${distance}km`);
 
       const params = {
         latitude,
@@ -41,13 +29,11 @@ class OpenChargeMapService {
         maxresults: maxResults,
         compact: true,
         verbose: false,
-        countrycode: 'UA', // Тільки Україна
-        // Фільтри
-        levelid: '2,3', // Level 2 (AC) та Level 3 (DC Fast)
-        statustypeid: 50, // Operational only
+        countrycode: 'UA',
+        levelid: '2,3',
+        statustypeid: 50,
       };
 
-      // Додаємо API key якщо є
       if (this.apiKey) {
         params.key = this.apiKey;
       }
@@ -62,65 +48,50 @@ class OpenChargeMapService {
 
       const stations = this.parseStations(response.data);
       
-      // Зберігаємо в кеш
       this.saveToCache(cacheKey, stations);
 
-      console.log(`✅ Знайдено ${stations.length} станцій`);
+      console.log(`Знайдено ${stations.length} станцій`);
       return stations;
 
     } catch (error) {
-      console.error('❌ Помилка OpenChargeMap API:', error.message);
+      console.error('Помилка OpenChargeMap API:', error.message);
       
-      // Повертаємо тестові дані при помилці
-      console.log('⚠️ Використання тестових даних');
+      console.log('Використання тестових даних');
       return this.getFallbackStations(latitude, longitude);
     }
   }
 
-  /**
-   * Отримання станцій вздовж маршруту
-   * @param {Location} start - Початкова точка
-   * @param {Location} end - Кінцева точка
-   * @param {number} corridorWidth - Ширина коридору в км
-   */
   async getStationsAlongRoute(start, end, corridorWidth = 50) {
     try {
-      // Розраховуємо центр та радіус
       const centerLat = (start.lat + end.lat) / 2;
       const centerLon = (start.lon + end.lon) / 2;
       
-      // Приблизний радіус (відстань від центру до краю)
       const distance = start.distanceTo(end) / 2 + corridorWidth;
 
       const allStations = await this.getStationsNearby(
         centerLat, 
         centerLon, 
-        Math.min(distance, 500), // OpenChargeMap max 500km
+        Math.min(distance, 500),
         100
       );
 
-      // Фільтруємо станції в коридорі маршруту
       const stationsInCorridor = allStations.filter(station => {
         const distToStart = start.distanceTo(station.location);
         const distToEnd = station.location.distanceTo(end);
         const directDist = start.distanceTo(end);
         
-        // Станція в коридорі якщо сума відстаней не набагато більша за пряму
         return (distToStart + distToEnd - directDist) < corridorWidth;
       });
 
-      console.log(`🛣️ Знайдено ${stationsInCorridor.length} станцій вздовж маршруту`);
+      console.log(`Знайдено ${stationsInCorridor.length} станцій вздовж маршруту`);
       return stationsInCorridor;
 
     } catch (error) {
-      console.error('❌ Помилка пошуку станцій на маршруті:', error.message);
+      console.error('Помилка пошуку станцій на маршруті:', error.message);
       return [];
     }
   }
 
-  /**
-   * Парсинг даних з OpenChargeMap в наші моделі
-   */
   parseStations(data) {
     if (!Array.isArray(data)) return [];
 
@@ -132,10 +103,8 @@ class OpenChargeMapService {
           this.formatAddress(poi.AddressInfo)
         );
 
-        // Визначаємо потужність
         const powerKw = this.getMaxPower(poi.Connections);
 
-        // Визначаємо доступність
         const availability = this.getAvailability(poi.StatusType);
 
         return new ChargingStation(
@@ -148,12 +117,9 @@ class OpenChargeMapService {
         console.error('Помилка парсингу станції:', error);
         return null;
       }
-    }).filter(Boolean); // Видаляємо null значення
+    }).filter(Boolean);
   }
 
-  /**
-   * Форматування адреси
-   */
   formatAddress(addressInfo) {
     const parts = [];
     
@@ -164,12 +130,9 @@ class OpenChargeMapService {
     return parts.join(', ') || 'Невідома адреса';
   }
 
-  /**
-   * Визначення максимальної потужності
-   */
   getMaxPower(connections) {
     if (!Array.isArray(connections) || connections.length === 0) {
-      return 50; // За замовчуванням
+      return 50;
     }
 
     const powers = connections
@@ -179,25 +142,18 @@ class OpenChargeMapService {
     return powers.length > 0 ? Math.max(...powers) : 50;
   }
 
-  /**
-   * Визначення доступності
-   */
   getAvailability(statusType) {
     if (!statusType) return 'unknown';
     
     const statusId = statusType.ID;
     
-    // https://openchargemap.org/site/develop/api/reference
-    if (statusId === 50) return 'available';      // Operational
-    if (statusId === 150) return 'unavailable';   // Temporarily Unavailable
-    if (statusId === 200) return 'private';       // Private Use
+    if (statusId === 50) return 'available';
+    if (statusId === 150) return 'unavailable';
+    if (statusId === 200) return 'private';
     
     return 'unknown';
   }
 
-  /**
-   * Кешування
-   */
   getFromCache(key) {
     const cached = this.cache.get(key);
     if (!cached) return null;
@@ -218,11 +174,8 @@ class OpenChargeMapService {
     });
   }
 
-  /**
-   * Резервні тестові дані (якщо API недоступний)
-   */
   getFallbackStations(lat, lon) {
-    console.log('⚠️ Використання резервних тестових станцій');
+    console.log('Використання резервних тестових станцій');
     
     const testStations = [
       { lat: 50.4501, lon: 30.5234, address: 'Київ, вул. Хрещатик', power: 50 },
@@ -243,12 +196,9 @@ class OpenChargeMapService {
     );
   }
 
-  /**
-   * Очищення кешу
-   */
   clearCache() {
     this.cache.clear();
-    console.log('🗑️ Кеш очищено');
+    console.log('Кеш очищено');
   }
 }
 

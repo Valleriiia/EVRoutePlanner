@@ -7,20 +7,16 @@ const Location = require('../models/Location');
 const routePlannerService = new RoutePlannerService();
 const chargingStationService = new ChargingStationService();
 
-/**
- * Побудова оптимального маршруту
- */
 exports.buildRoute = async (req, res, next) => {
   try {
     const { startPoint, endPoint, batteryLevel, vehicle } = req.body;
 
-    console.log('📥 Отримано запит на побудову маршруту:', {
+    console.log('Отримано запит на побудову маршруту:', {
       start: startPoint,
       end: endPoint,
       battery: batteryLevel
     });
 
-    // Створення об'єктів моделей
     const start = new Location(
       startPoint.lat,
       startPoint.lon,
@@ -40,7 +36,6 @@ exports.buildRoute = async (req, res, next) => {
       vehicle?.consumptionPerKm || 0.2
     );
 
-    // Побудова маршруту (станції завантажуються автоматично)
     const startTime = Date.now();
     const route = await routePlannerService.buildRoute(
       userInput,
@@ -48,37 +43,32 @@ exports.buildRoute = async (req, res, next) => {
     );
     const executionTime = Date.now() - startTime;
 
-    console.log(`✅ Маршрут побудовано за ${executionTime}ms`);
+    console.log(`Маршрут побудовано за ${executionTime}ms`);
 
-    // НОВЕ: Перевірка чи є попередження в маршруті
     let responseMessage = 'Маршрут успішно побудовано';
     let hasWarning = false;
     
     if (route.warning) {
       responseMessage = route.warning;
       hasWarning = true;
-      console.log('⚠️ Маршрут з попередженням:', route.warning);
+      console.log('Маршрут з попередженням:', route.warning);
     }
 
-    // Повернення результату
     res.json({
       success: true,
       route: route.toJSON(),
       executionTime,
       message: responseMessage,
-      hasWarning, // НОВЕ: Додаємо прапорець для frontend
+      hasWarning,
       dataSource: process.env.USE_REAL_CHARGING_STATIONS !== 'false' ? 'OpenChargeMap' : 'Test Data'
     });
 
   } catch (error) {
-    console.error('❌ Помилка побудови маршруту:', error);
+    console.error('Помилка побудови маршруту:', error);
     next(error);
   }
 };
 
-/**
- * Отримання всіх зарядних станцій
- */
 exports.getChargingStations = async (req, res, next) => {
   try {
     const stations = await chargingStationService.getAllStations();
@@ -99,14 +89,11 @@ exports.getChargingStations = async (req, res, next) => {
     });
 
   } catch (error) {
-    console.error('❌ Помилка отримання станцій:', error);
+    console.error('Помилка отримання станцій:', error);
     next(error);
   }
 };
 
-/**
- * Отримання зарядних станцій поблизу точки
- */
 exports.getNearbyStations = async (req, res, next) => {
   try {
     const { lat, lon, radius = 50 } = req.query;
@@ -141,19 +128,15 @@ exports.getNearbyStations = async (req, res, next) => {
     });
 
   } catch (error) {
-    console.error('❌ Помилка пошуку станцій:', error);
+    console.error('Помилка пошуку станцій:', error);
     next(error);
   }
 };
 
-/**
- * Оптимізація існуючого маршруту
- */
 exports.optimizeRoute = async (req, res, next) => {
   try {
     const { route, batteryLevel, vehicle } = req.body;
 
-    // Тут можна додати логіку для переоптимізації
     res.json({
       success: true,
       message: 'Оптимізація виконана',
@@ -161,7 +144,7 @@ exports.optimizeRoute = async (req, res, next) => {
     });
 
   } catch (error) {
-    console.error('❌ Помилка оптимізації:', error);
+    console.error('Помилка оптимізації:', error);
     next(error);
   }
 };
