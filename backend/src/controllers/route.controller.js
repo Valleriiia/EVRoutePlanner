@@ -1,3 +1,4 @@
+// backend/src/controllers/route.controller.js
 const RoutePlannerService = require('../services/route-planner.service');
 const ChargingStationService = require('../services/charging-station.service');
 const UserInput = require('../models/UserInput');
@@ -106,7 +107,7 @@ exports.getNearbyStations = async (req, res, next) => {
     }
 
     const location = new Location(parseFloat(lat), parseFloat(lon));
-    const stations = await chargingStationService.findStationsNear(
+    const stations = await chargingStationService.getStationsNearby(
       location,
       parseFloat(radius)
     );

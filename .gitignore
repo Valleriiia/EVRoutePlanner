@@ -16,3 +16,4 @@ Thumbs.db
 *.swp
 
 .env
+.env.test

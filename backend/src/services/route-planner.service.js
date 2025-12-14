@@ -735,7 +735,7 @@ class RoutePlannerService {
                     isValid: false,
                     critical: true,
                     reason:
-                        `Критична помилка: Недостатньо заряду для сегмента ${
+                        `❌ Критична помилка: Недостатньо заряду для сегмента ${
                             i + 1
                         }. ` +
                         `Потрібно ${batteryUsage.toFixed(
@@ -766,7 +766,7 @@ class RoutePlannerService {
                     return {
                         isValid: false,
                         critical: true,
-                        reason: `Критична помилка: Заряд ${currentBattery.toFixed(
+                        reason: `❌ Критична помилка: Заряд ${currentBattery.toFixed(
                             1
                         )}% після сегмента ${i + 1}.`,
                         segmentIndex: i,
@@ -792,7 +792,7 @@ class RoutePlannerService {
                 isValid: false,
                 critical: true,
                 reason:
-                    `Критична помилка: Залишковий заряд (${currentBattery.toFixed(
+                    `❌ Критична помилка: Залишковий заряд (${currentBattery.toFixed(
                         1
                     )}%) нижче безпечного мінімуму ${minSafeBattery}%. ` +
                     `Додайте ще одну зупинку на зарядку або збільште початковий заряд.`,

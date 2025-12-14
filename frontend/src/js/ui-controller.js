@@ -168,7 +168,7 @@ class UIController {
 
             if (
                 isCriticalWarning ||
-                (response.hasWarning && response.message?.startsWith("❌"))
+                (response.hasWarning || response.message?.startsWith("❌")) && !isInfoWarning
             ) {
                 const warningMessage =
                     response.route?.warning || response.message;
